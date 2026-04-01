@@ -15,3 +15,18 @@ export function calculatePercentage(score: number, maxScore: number): number {
   if (maxScore === 0) return 0;
   return Math.round((score / maxScore) * 100);
 }
+
+export type {
+  AdapterConfig,
+  Signal,
+  Evidence,
+  SignalResult,
+  Adapter,
+  DimensionId,
+  Question,
+  QuestionScore,
+  DimensionScore,
+  TierLevel,
+  Tier,
+  ScorecardResult,
+} from './types/index.js';
