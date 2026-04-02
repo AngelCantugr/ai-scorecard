@@ -1,4 +1,4 @@
-import type { Dimension } from "./types.js";
+import type { Dimension } from "./types/index.js";
 
 export const dimensions: Dimension[] = [
   {

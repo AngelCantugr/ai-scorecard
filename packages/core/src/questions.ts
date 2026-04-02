@@ -1,4 +1,4 @@
-import type { Question } from "./types.js";
+import type { Question } from "./types/index.js";
 
 export const questions: Question[] = [
   // D1: Platform & Infrastructure

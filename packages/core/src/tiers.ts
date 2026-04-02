@@ -1,4 +1,4 @@
-import type { Tier } from "./types.js";
+import type { Tier } from "./types/index.js";
 
 export const tiers: Tier[] = [
   { level: 1, label: "AI-Curious", minScore: 0, maxScore: 17 },
