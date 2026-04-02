@@ -17,20 +17,18 @@ export function calculatePercentage(score: number, maxScore: number): number {
 }
 
 export type {
-  DimensionId,
-  Question,
-  Dimension,
-  Tier,
-} from "./types.js";
-export type {
   AdapterConfig,
   Signal,
   Evidence,
   SignalResult,
   Adapter,
+  DimensionId,
+  Dimension,
+  Question,
   QuestionScore,
   DimensionScore,
   TierLevel,
+  Tier,
   ScorecardResult,
 } from './types/index.js';
 export { dimensions } from "./dimensions.js";

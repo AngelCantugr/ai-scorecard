@@ -3,7 +3,4 @@
  * Plugin system for data sources (GitHub, GitLab, etc.)
  */
 
-export interface Adapter {
-  name: string;
-  fetch(): Promise<Record<string, unknown>>;
-}
+export type { Adapter } from "@ai-scorecard/core";

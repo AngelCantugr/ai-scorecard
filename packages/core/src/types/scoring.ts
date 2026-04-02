@@ -9,6 +9,14 @@ export type DimensionId =
   | 'observability-cost'
   | 'documentation-context';
 
+/** Dimension metadata */
+export interface Dimension {
+  id: DimensionId;
+  name: string;
+  questionCount: number;
+  maxScore: number;
+}
+
 /** A single question in the scorecard */
 export interface Question {
   /** Unique question ID (e.g., "D1-Q1") */
