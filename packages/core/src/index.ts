@@ -34,3 +34,9 @@ export type {
 export { dimensions } from "./dimensions.js";
 export { questions } from "./questions.js";
 export { tiers } from "./tiers.js";
+export { computeScorecard } from "./engine.js";
+export {
+  getWeakestDimensions,
+  getUnaddressedQuestions,
+  getLowConfidenceQuestions,
+} from "./analysis.js";
