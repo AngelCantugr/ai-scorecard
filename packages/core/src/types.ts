@@ -1,10 +1,10 @@
 export type DimensionId =
-  | 'platform-infrastructure'
-  | 'developer-tooling'
-  | 'cicd-velocity'
-  | 'governance-security'
-  | 'observability-cost'
-  | 'documentation-context';
+  | "platform-infrastructure"
+  | "developer-tooling"
+  | "cicd-velocity"
+  | "governance-security"
+  | "observability-cost"
+  | "documentation-context";
 
 export interface Question {
   id: string;

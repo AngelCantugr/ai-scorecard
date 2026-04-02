@@ -16,7 +16,7 @@ export function calculatePercentage(score: number, maxScore: number): number {
   return Math.round((score / maxScore) * 100);
 }
 
-export type { DimensionId, Question, Dimension, Tier } from './types.js';
-export { dimensions } from './dimensions.js';
-export { questions } from './questions.js';
-export { tiers } from './tiers.js';
+export type { DimensionId, Question, Dimension, Tier } from "./types.js";
+export { dimensions } from "./dimensions.js";
+export { questions } from "./questions.js";
+export { tiers } from "./tiers.js";
