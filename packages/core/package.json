@@ -14,9 +14,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "test": "tsc --project tsconfig.test.json --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "node --test test/**/*.test.mjs",
+    "test": "tsc --project tsconfig.json && node --test test/**/*.test.mjs",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
