@@ -22,3 +22,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# npm lock file (project uses pnpm)
+package-lock.json
