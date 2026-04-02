@@ -30,9 +30,10 @@ const evidence: Evidence = {
 };
 
 const signalResult: SignalResult = {
+  signalId: signal.id,
   questionId: signal.questionId,
   score: 2,
-  evidence,
+  evidence: [evidence],
   confidence: 1,
 };
 
@@ -65,7 +66,7 @@ const questionScore: QuestionScore = {
   questionId: question.id,
   score: signalResult.score,
   confidence: signalResult.confidence,
-  evidence: [evidence],
+  evidence: signalResult.evidence,
 };
 
 const dimensionScore: DimensionScore = {

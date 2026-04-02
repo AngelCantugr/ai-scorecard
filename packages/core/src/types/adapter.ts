@@ -26,12 +26,14 @@ export interface Evidence {
 
 /** Result of collecting a single signal */
 export interface SignalResult {
+  /** Unique signal ID from the adapter manifest */
+  signalId: string;
   /** Maps to one of the 35 questions */
   questionId: string;
   /** The score: 0 = not adopted, 1 = partial, 2 = fully adopted */
   score: 0 | 1 | 2;
-  /** Evidence backing the score */
-  evidence: Evidence;
+  /** Evidence items backing the score */
+  evidence: Evidence[];
   /** 0-1, how reliable this signal is (1 = high confidence, direct measurement; 0.5 = AI-inferred) */
   confidence: number;
 }
