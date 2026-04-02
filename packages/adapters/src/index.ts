@@ -12,3 +12,5 @@ export type {
   TokenUsage,
   BatchAnalysisResult,
 } from "./ai-inference/types.js";
+export { GitHubAdapter } from "./github/index.js";
+export type { GitHubAdapterConfig } from "./github/config.js";

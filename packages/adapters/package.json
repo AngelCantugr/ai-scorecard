@@ -15,15 +15,18 @@
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "pretest": "tsc --project tsconfig.json",
-    "test": "node --test src/ai-inference/__tests__/ai-inference.test.mjs",
+    "test": "vitest run src/github/__tests__/github-adapter.test.ts && node --test src/ai-inference/__tests__/ai-inference.test.mjs",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@ai-scorecard/core": "workspace:*",
-    "@anthropic-ai/sdk": "^0.82.0"
+    "@anthropic-ai/sdk": "^0.82.0",
+    "@octokit/rest": "22.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.4.5"
+    "@types/node": "^20.19.37",
+    "typescript": "^5.4.5",
+    "vitest": "4.1.2"
   }
 }
