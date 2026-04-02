@@ -14,11 +14,13 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "node --test src/ai-inference/__tests__/ai-inference.test.mjs",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@ai-scorecard/core": "workspace:*"
+    "@ai-scorecard/core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.82.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5"
