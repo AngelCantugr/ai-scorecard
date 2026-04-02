@@ -1,17 +1,17 @@
-import type { Question } from './types.js';
+import type { Question } from "./types.js";
 
 export const questions: Question[] = [
   // D1: Platform & Infrastructure
   {
-    id: 'D1-Q1',
-    dimensionId: 'platform-infrastructure',
-    text: 'Is there a centralized AI gateway/proxy with logging and rate limiting?',
+    id: "D1-Q1",
+    dimensionId: "platform-infrastructure",
+    text: "Is there a centralized AI gateway/proxy with logging and rate limiting?",
     rubric: {
-      0: 'Teams call model APIs directly.',
-      1: 'Shared wrapper but no centralized routing.',
-      2: 'Centralized gateway with logging, rate limiting, and model abstraction.',
+      0: "Teams call model APIs directly.",
+      1: "Shared wrapper but no centralized routing.",
+      2: "Centralized gateway with logging, rate limiting, and model abstraction.",
     },
-    measurementStrategy: 'Repo scan for gateway configs, infrastructure-as-code definitions',
+    measurementStrategy: "Repo scan for gateway configs, infrastructure-as-code definitions",
   },
   {
     id: 'D1-Q2',
