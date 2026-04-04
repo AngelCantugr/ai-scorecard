@@ -6,7 +6,6 @@ import type {
   QuestionScore,
   ScorecardResult,
   SignalResult,
-  Tier,
 } from "./types/index.js";
 
 /**
@@ -75,9 +74,14 @@ export function computeScorecard(
     maxScore === 0 ? 0 : Math.round((totalScore / maxScore) * 100);
 
   // 4. Determine tier
-  const tier =
-    tiers.find((t) => totalScore >= t.minScore && totalScore <= t.maxScore) ??
-    (tiers[0] as Tier);
+  const tier = tiers.find(
+    (t) => totalScore >= t.minScore && totalScore <= t.maxScore,
+  );
+  if (tier === undefined) {
+    throw new Error(
+      `No tier found for score ${totalScore} (valid range: ${tiers[0]?.minScore}–${tiers.at(-1)?.maxScore})`,
+    );
+  }
 
   // 5. Average confidence across only measured questions
   const measuredQuestionScores = dimensionScores
