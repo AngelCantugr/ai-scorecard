@@ -441,6 +441,8 @@ describe("GitHubAdapter", () => {
       // Should not throw — retries on 429
       const results = await adapter.collect();
       expect(results).toHaveLength(16);
+      // Verify that a retry actually occurred (not just the empty-org fallback)
+      expect(callCount).toBeGreaterThan(1);
     });
   });
 

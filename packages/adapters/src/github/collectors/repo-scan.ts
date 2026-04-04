@@ -85,8 +85,8 @@ async function fetchRepoFilePaths(
 /**
  * Q1 — Centralized AI gateway/proxy
  * Score 0: no gateway config found
- * Score 1: gateway config found in one repo
- * Score 2: centralized config repo with gateway
+ * Score 1: gateway config found in 2+ repos (distributed — each team has its own)
+ * Score 2: gateway config found in exactly one dedicated repo (centralized)
  */
 export async function collectGatewaySignal(
   octokit: Octokit,
@@ -116,8 +116,8 @@ export async function collectGatewaySignal(
   ];
 
   let score: 0 | 1 | 2 = 0;
-  if (matchedRepos.length >= 2) score = 2;
-  else if (matchedRepos.length === 1) score = 1;
+  if (matchedRepos.length === 1) score = 2; // Single dedicated repo = centralized
+  else if (matchedRepos.length >= 2) score = 1; // Multiple repos = distributed, partial credit
 
   return {
     signalId: "github:repo-scan:q1-gateway",
@@ -242,7 +242,14 @@ export async function collectAIRulesSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    for (const steeringFile of ["CLAUDE.md", ".cursorrules", "agents.md"]) {
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+
+    // Only attempt getContent for files that actually exist in the repo tree
+    const steeringCandidates = ["CLAUDE.md", ".cursorrules", "agents.md"].filter((sf) =>
+      paths.some((p) => p === sf)
+    );
+
+    for (const steeringFile of steeringCandidates) {
       try {
         const { data } = await octokit.repos.getContent({
           owner,
@@ -263,7 +270,7 @@ export async function collectAIRulesSignal(
           break;
         }
       } catch {
-        // File not found — continue
+        // ignore
       }
     }
   }
@@ -295,46 +302,62 @@ export async function collectAIRulesSignal(
 /**
  * Q21 — Prompt security (prompts not in client code)
  * Score 0: prompts found in frontend/client directories
- * Score 1: prompts in server code but no injection protection evident
- * Score 2: prompts server-side only with no exposure in client bundles
+ * Score 1: no client-side prompt exposure detected, but no confirmed server-side management
+ * Score 2: prompt directories found in server-side paths with no client exposure
  */
 export async function collectPromptSecuritySignal(
   octokit: Octokit,
   repos: RepoInfo[]
 ): Promise<SignalResult> {
   const exposedRepos: string[] = [];
+  const serverSidePromptRepos: string[] = [];
   const clientDirPatterns = ["src/client", "src/frontend", "src/app", "public", "static", "frontend"];
+  const serverPromptDirs = ["prompts", "templates", "prompt-templates", "llm-prompts"];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
     const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+
     const promptInClientCode = paths.some(
       (p) =>
         clientDirPatterns.some((dir) => p.startsWith(`${dir}/`)) &&
         /prompt|system[_-]?message/i.test(p)
     );
+
     if (promptInClientCode) {
       exposedRepos.push(repo.fullName);
+      continue;
+    }
+
+    // Check for server-side prompt directories (confirms intentional server-side management)
+    const hasServerPromptDir = serverPromptDirs.some((dir) =>
+      paths.some((p) => p === dir || p.startsWith(`${dir}/`))
+    );
+    if (hasServerPromptDir) {
+      serverSidePromptRepos.push(repo.fullName);
     }
   }
 
   const evidence: Evidence[] = [
     {
       source: "github:repos",
-      data: { exposedRepos, totalRepos: repos.length },
+      data: { exposedRepos, serverSidePromptRepos, totalRepos: repos.length },
       summary:
-        exposedRepos.length === 0
-          ? "No prompt files detected in client-side code directories."
-          : `Potential prompt exposure in client code: ${exposedRepos.join(", ")}`,
+        exposedRepos.length > 0
+          ? `Potential prompt exposure in client code: ${exposedRepos.join(", ")}`
+          : serverSidePromptRepos.length > 0
+            ? `Server-side prompt dirs found in: ${serverSidePromptRepos.join(", ")}. No client exposure detected.`
+            : "No prompt files detected in client-side code directories.",
     },
   ];
 
   let score: 0 | 1 | 2 = 0;
   if (exposedRepos.length > 0) {
     score = 0;
+  } else if (serverSidePromptRepos.length > 0) {
+    score = 2; // Confirmed server-side prompt management, no client exposure
   } else if (repos.length > 0) {
-    // Heuristic: if no client-side exposure, give partial credit
-    score = 1;
+    score = 1; // No client exposure, but no confirmed server-side prompt dirs either
   }
 
   return {

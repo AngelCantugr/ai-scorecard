@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "pretest": "tsc --project tsconfig.json",
     "test": "vitest run src/github/__tests__/github-adapter.test.ts && node --test src/ai-inference/__tests__/ai-inference.test.mjs",

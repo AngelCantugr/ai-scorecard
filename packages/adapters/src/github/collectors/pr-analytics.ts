@@ -53,51 +53,62 @@ async function fetchRecentPRs(
 
     const recentPRs = prs.filter((pr) => pr.merged_at !== null && new Date(pr.updated_at) >= since);
 
-    return await Promise.all(
-      recentPRs.slice(0, 20).map(async (pr) => {
-        let reviews: { login: string | undefined; body: string }[] = [];
-        let commits: { message: string; authorLogin: string | undefined }[] = [];
+    // Sequential processing to avoid triggering GitHub secondary rate limits
+    const enriched: {
+      number: number;
+      createdAt: Date;
+      mergedAt: Date | null;
+      title: string;
+      body: string | null;
+      reviews: { login: string | undefined; body: string }[];
+      commits: { message: string; authorLogin: string | undefined }[];
+    }[] = [];
 
-        try {
-          const { data: reviewData } = await octokit.pulls.listReviews({
-            owner,
-            repo,
-            pull_number: pr.number,
-          });
-          reviews = reviewData.map((r) => ({
-            login: r.user?.login,
-            body: r.body ?? "",
-          }));
-        } catch {
-          // ignore
-        }
+    for (const pr of recentPRs.slice(0, 20)) {
+      let reviews: { login: string | undefined; body: string }[] = [];
+      let commits: { message: string; authorLogin: string | undefined }[] = [];
 
-        try {
-          const { data: commitData } = await octokit.pulls.listCommits({
-            owner,
-            repo,
-            pull_number: pr.number,
-            per_page: 20,
-          });
-          commits = commitData.map((c) => ({
-            message: c.commit.message,
-            authorLogin: c.author?.login ?? undefined,
-          }));
-        } catch {
-          // ignore
-        }
+      try {
+        const { data: reviewData } = await octokit.pulls.listReviews({
+          owner,
+          repo,
+          pull_number: pr.number,
+        });
+        reviews = reviewData.map((r) => ({
+          login: r.user?.login,
+          body: r.body ?? "",
+        }));
+      } catch {
+        // ignore
+      }
 
-        return {
-          number: pr.number,
-          createdAt: new Date(pr.created_at),
-          mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
-          title: pr.title,
-          body: pr.body,
-          reviews,
-          commits,
-        };
-      })
-    );
+      try {
+        const { data: commitData } = await octokit.pulls.listCommits({
+          owner,
+          repo,
+          pull_number: pr.number,
+          per_page: 20,
+        });
+        commits = commitData.map((c) => ({
+          message: c.commit.message,
+          authorLogin: c.author?.login ?? undefined,
+        }));
+      } catch {
+        // ignore
+      }
+
+      enriched.push({
+        number: pr.number,
+        createdAt: new Date(pr.created_at),
+        mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
+        title: pr.title,
+        body: pr.body,
+        reviews,
+        commits,
+      });
+    }
+
+    return enriched;
   } catch {
     return [];
   }
@@ -279,7 +290,8 @@ export async function collectPRCycleTimeSignal(
 
 /**
  * Q20 — AI artifact SDLC (AI configs reviewed via PRs)
- * Checks if AI config files have PR review history.
+ * Checks if AI config files have PR review history by listing merged PRs
+ * and inspecting their changed files via pulls.listFiles.
  */
 export async function collectAIArtifactSDLCSignal(
   octokit: Octokit,
@@ -289,36 +301,62 @@ export async function collectAIArtifactSDLCSignal(
   const reviewedRepos: string[] = [];
   const unreviewedRepos: string[] = [];
 
-  const aiConfigFiles = ["CLAUDE.md", "agents.md", ".cursorrules", "prompts/", "templates/"];
+  const aiConfigFilePatterns = /CLAUDE\.md|agents\.md|\.cursorrules|\.clinerules|prompts?\//i;
 
   for (const repo of repos.slice(0, 15)) {
     const owner = repo.fullName.split("/")[0] ?? "";
     try {
-      // Search for PRs that modified AI config files
-      const { data: searchResult } = await octokit.search.issuesAndPullRequests({
-        q: `repo:${repo.fullName} is:pr is:merged ${aiConfigFiles.map((f) => `head:${f}`).join(" OR ")}`,
-        per_page: 5,
+      // List recent merged PRs
+      const { data: prs } = await octokit.pulls.list({
+        owner,
+        repo: repo.name,
+        state: "closed",
+        sort: "updated",
+        direction: "desc",
+        per_page: 20,
       });
 
-      // Also check commits on main branch that touch these files
+      const mergedPRs = prs.filter(
+        (pr) => pr.merged_at !== null && new Date(pr.merged_at) >= since
+      );
+
+      let foundReviewedPR = false;
+      for (const pr of mergedPRs.slice(0, 10)) {
+        try {
+          const { data: files } = await octokit.pulls.listFiles({
+            owner,
+            repo: repo.name,
+            pull_number: pr.number,
+            per_page: 100,
+          });
+          const touchedAIConfig = files.some((f) => aiConfigFilePatterns.test(f.filename));
+          if (touchedAIConfig) {
+            foundReviewedPR = true;
+            break;
+          }
+        } catch {
+          // ignore per-PR failures
+        }
+      }
+
+      // Also check commits on main branch that touch these files (direct pushes)
       const { data: commits } = await octokit.repos.listCommits({
         owner,
         repo: repo.name,
         since: since.toISOString(),
         per_page: 30,
       });
-
       const aiRelatedCommits = commits.filter((c) =>
-        /claude\.md|agents\.md|\.cursorrules|prompts?\//i.test(c.commit.message)
+        aiConfigFilePatterns.test(c.commit.message)
       );
 
-      if (searchResult.total_count > 0) {
+      if (foundReviewedPR) {
         reviewedRepos.push(repo.fullName);
       } else if (aiRelatedCommits.length > 0) {
         unreviewedRepos.push(repo.fullName);
       }
     } catch {
-      // ignore search quota issues
+      // ignore per-repo failures
     }
   }
 

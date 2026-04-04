@@ -238,7 +238,9 @@ export class GitHubAdapter implements Adapter {
       const repoInfos: RepoInfo[] = [];
       for (const repoName of repoAllowlist.slice(0, maxRepos)) {
         try {
-          const { data } = await this.octokit.repos.get({ owner: org, repo: repoName });
+          const { data } = await withRetry(() =>
+            this.octokit!.repos.get({ owner: org, repo: repoName })
+          );
           repoInfos.push({
             name: data.name,
             fullName: data.full_name,
@@ -256,14 +258,16 @@ export class GitHubAdapter implements Adapter {
     let page = 1;
     while (repoInfos.length < maxRepos) {
       try {
-        const { data } = await this.octokit.repos.listForOrg({
-          org,
-          type: "all",
-          per_page: Math.min(100, maxRepos - repoInfos.length),
-          page,
-          sort: "pushed",
-          direction: "desc",
-        });
+        const { data } = await withRetry(() =>
+          this.octokit!.repos.listForOrg({
+            org,
+            type: "all",
+            per_page: Math.min(100, maxRepos - repoInfos.length),
+            page,
+            sort: "pushed",
+            direction: "desc",
+          })
+        );
         if (data.length === 0) break;
         for (const repo of data) {
           repoInfos.push({
