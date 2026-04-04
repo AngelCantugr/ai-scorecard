@@ -13,13 +13,13 @@ export function getWeakestDimensions(result: ScorecardResult): DimensionScore[] 
 }
 
 /**
- * Returns questions scored 0 (not adopted) — the biggest opportunities.
- * Sorted by dimension, then by question order.
+ * Returns questions that were measured but scored 0 — confirmed gaps, not adopted.
+ * Excludes unmeasured questions (confidence === 0) to avoid conflating "not assessed" with "not adopted".
  */
 export function getUnaddressedQuestions(result: ScorecardResult): QuestionScore[] {
   return result.dimensions
     .flatMap((d) => d.questionScores)
-    .filter((qs) => qs.score === 0);
+    .filter((qs) => qs.confidence > 0 && qs.score === 0);
 }
 
 /**
