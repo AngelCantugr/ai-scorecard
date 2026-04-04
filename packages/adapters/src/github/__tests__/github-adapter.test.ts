@@ -16,21 +16,6 @@ function makeOctokit(overrides: Record<string, unknown> = {}): Record<string, un
     },
   };
 
-  const defaultContent = {
-    data: {
-      content: Buffer.from("# Placeholder").toString("base64"),
-      encoding: "base64",
-    },
-  };
-
-  const defaultPulls = { data: [] };
-  const defaultWorkflowRuns = { data: { workflow_runs: [] } };
-  const defaultCommits = { data: [] };
-  const defaultSearch = { data: { total_count: 0, items: [] } };
-  const defaultRepos = {
-    data: [],
-  };
-
   return {
     git: {
       getTree: vi.fn().mockResolvedValue(defaultTree),
@@ -43,20 +28,18 @@ function makeOctokit(overrides: Record<string, unknown> = {}): Record<string, un
           default_branch: "main",
         },
       }),
-      listForOrg: vi.fn().mockResolvedValue(defaultRepos),
+      listForOrg: vi.fn().mockResolvedValue({ data: [] }),
       getContent: vi.fn().mockRejectedValue({ status: 404 }),
-      listCommits: vi.fn().mockResolvedValue(defaultCommits),
-    },
-    pulls: {
-      list: vi.fn().mockResolvedValue(defaultPulls),
-      listReviews: vi.fn().mockResolvedValue({ data: [] }),
       listCommits: vi.fn().mockResolvedValue({ data: [] }),
     },
-    actions: {
-      listWorkflowRunsForRepo: vi.fn().mockResolvedValue(defaultWorkflowRuns),
+    pulls: {
+      list: vi.fn().mockResolvedValue({ data: [] }),
+      listReviews: vi.fn().mockResolvedValue({ data: [] }),
+      listCommits: vi.fn().mockResolvedValue({ data: [] }),
+      listFiles: vi.fn().mockResolvedValue({ data: [] }),
     },
-    search: {
-      issuesAndPullRequests: vi.fn().mockResolvedValue(defaultSearch),
+    actions: {
+      listWorkflowRunsForRepo: vi.fn().mockResolvedValue({ data: { workflow_runs: [] } }),
     },
     ...overrides,
   };
@@ -443,6 +426,146 @@ describe("GitHubAdapter", () => {
       expect(results).toHaveLength(16);
       // Verify that a retry actually occurred (not just the empty-org fallback)
       expect(callCount).toBeGreaterThan(1);
+    });
+  });
+
+  describe("Q20 — AI artifact SDLC (collectAIArtifactSDLCSignal)", () => {
+    it("scores 2 when 2+ repos have merged PRs that modified AI config files", async () => {
+      const now = Date.now();
+      const octokit = makeOctokit();
+      (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
+        data: [
+          { name: "repo-a", full_name: "test-org/repo-a", default_branch: "main" },
+          { name: "repo-b", full_name: "test-org/repo-b", default_branch: "main" },
+        ],
+      });
+
+      const mergedPR = {
+        number: 1,
+        title: "Update CLAUDE.md",
+        body: null,
+        state: "closed",
+        merged_at: new Date(now - 86400000).toISOString(), // 1 day ago
+        created_at: new Date(now - 86400000 - 3600000).toISOString(),
+        updated_at: new Date(now - 86400000).toISOString(),
+      };
+
+      (octokit.pulls as Record<string, Mock>)["list"] = vi.fn().mockResolvedValue({ data: [mergedPR] });
+      (octokit.pulls as Record<string, Mock>)["listFiles"] = vi.fn().mockResolvedValue({
+        data: [{ filename: "CLAUDE.md" }, { filename: "src/index.ts" }],
+      });
+      (octokit.repos as Record<string, Mock>)["listCommits"] = vi.fn().mockResolvedValue({ data: [] });
+
+      const adapter = await createConnectedAdapter(octokit);
+      const results = await adapter.collect();
+      const q20 = results.find((r) => r.questionId === "D4-Q20");
+
+      expect(q20).toBeDefined();
+      expect(q20?.score).toBe(2); // 2 repos both have reviewed AI config PRs
+      expect(q20?.evidence[0]?.data).toMatchObject({ reviewedRepos: expect.arrayContaining(["test-org/repo-a", "test-org/repo-b"]) });
+    });
+
+    it("scores 1 when only unreviewed direct commits touch AI config files", async () => {
+      const now = Date.now();
+      const octokit = makeOctokit();
+      (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
+        data: [{ name: "repo-a", full_name: "test-org/repo-a", default_branch: "main" }],
+      });
+
+      // No merged PRs but a commit with CLAUDE.md in message
+      (octokit.pulls as Record<string, Mock>)["list"] = vi.fn().mockResolvedValue({ data: [] });
+      (octokit.repos as Record<string, Mock>)["listCommits"] = vi.fn().mockResolvedValue({
+        data: [
+          {
+            commit: { message: "update CLAUDE.md with new rules" },
+            author: { login: "dev" },
+          },
+        ],
+      });
+
+      const adapter = await createConnectedAdapter(octokit);
+      const results = await adapter.collect();
+      const q20 = results.find((r) => r.questionId === "D4-Q20");
+
+      expect(q20?.score).toBe(1);
+      expect(q20?.evidence[0]?.data).toMatchObject({ unreviewedRepos: ["test-org/repo-a"] });
+    });
+  });
+
+  describe("Q21 — prompt security (collectPromptSecuritySignal)", () => {
+    it("scores 2 when server-side prompt dirs found and no client exposure", async () => {
+      const octokit = makeOctokit();
+      (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
+        data: [{ name: "api-service", full_name: "test-org/api-service", default_branch: "main" }],
+      });
+      (octokit.git as Record<string, Mock>)["getTree"] = vi.fn().mockResolvedValue({
+        data: {
+          tree: [
+            { type: "blob", path: "prompts/system-prompt.txt" },
+            { type: "blob", path: "prompts/user-template.txt" },
+            { type: "blob", path: "src/server.ts" },
+          ],
+        },
+      });
+
+      const adapter = await createConnectedAdapter(octokit);
+      const results = await adapter.collect();
+      const q21 = results.find((r) => r.questionId === "D4-Q21");
+
+      expect(q21?.score).toBe(2);
+      expect(q21?.evidence[0]?.data).toMatchObject({
+        serverSidePromptRepos: ["test-org/api-service"],
+        exposedRepos: [],
+      });
+    });
+
+    it("scores 0 when prompt files found in client-side directories", async () => {
+      const octokit = makeOctokit();
+      (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
+        data: [{ name: "webapp", full_name: "test-org/webapp", default_branch: "main" }],
+      });
+      (octokit.git as Record<string, Mock>)["getTree"] = vi.fn().mockResolvedValue({
+        data: {
+          tree: [
+            { type: "blob", path: "public/prompts/system-prompt.txt" },
+            { type: "blob", path: "src/index.ts" },
+          ],
+        },
+      });
+
+      const adapter = await createConnectedAdapter(octokit);
+      const results = await adapter.collect();
+      const q21 = results.find((r) => r.questionId === "D4-Q21");
+
+      expect(q21?.score).toBe(0);
+      expect(q21?.evidence[0]?.data).toMatchObject({ exposedRepos: ["test-org/webapp"] });
+    });
+  });
+
+  describe("collector fallback behavior", () => {
+    it("emits a zero-score result with confidence 0 when a collector throws", async () => {
+      const octokit = makeOctokit();
+      (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
+        data: [{ name: "test-repo", full_name: "test-org/test-repo", default_branch: "main" }],
+      });
+      // Make git.getTree throw an unrecoverable error — will affect multiple repo-scan collectors
+      (octokit.git as Record<string, Mock>)["getTree"] = vi.fn().mockRejectedValue(
+        new Error("unexpected API error")
+      );
+
+      const adapter = await createConnectedAdapter(octokit);
+      const results = await adapter.collect();
+
+      // Output must always have exactly 16 entries
+      expect(results).toHaveLength(16);
+
+      // Any failed collector should produce confidence:0 and score:0
+      const failedResults = results.filter((r) => r.confidence === 0);
+      expect(failedResults.length).toBeGreaterThan(0);
+      for (const r of failedResults) {
+        expect(r.score).toBe(0);
+        expect(r.evidence[0]?.summary).toContain("Collector failed");
+      }
     });
   });
 

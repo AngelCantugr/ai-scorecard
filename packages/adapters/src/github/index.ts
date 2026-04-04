@@ -116,7 +116,32 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Wrap an async operation with exponential backoff on rate limit errors (429/403).
+ * Returns true only for genuine rate-limit errors.
+ * A 403 from an auth/permission failure should NOT be retried.
+ */
+function isRateLimitError(err: unknown): boolean {
+  if (err === null || typeof err !== "object") return false;
+  const e = err as {
+    status?: number;
+    message?: string;
+    response?: { headers?: Record<string, string> };
+  };
+
+  if (e.status === 429) return true;
+
+  if (e.status === 403) {
+    // Rate-limit 403: x-ratelimit-remaining is 0, or message mentions rate limiting
+    const remaining = e.response?.headers?.["x-ratelimit-remaining"];
+    if (remaining === "0") return true;
+    if (typeof e.message === "string" && /rate.?limit|secondary rate/i.test(e.message)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Wrap an async operation with exponential backoff on rate limit errors (429 or
+ * rate-limit 403). Auth/permission 403s are NOT retried — they fail immediately.
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -129,18 +154,11 @@ async function withRetry<T>(
       return await fn();
     } catch (err: unknown) {
       lastError = err;
-      const status =
-        err !== null &&
-        typeof err === "object" &&
-        "status" in err
-          ? (err as { status: number }).status
-          : undefined;
-
-      if (status === 429 || status === 403) {
+      if (isRateLimitError(err)) {
         const delayMs = baseDelayMs * Math.pow(2, attempt);
         await sleep(delayMs);
       } else {
-        // Don't retry on other errors
+        // Don't retry auth failures or other non-rate-limit errors
         throw err;
       }
     }
@@ -193,32 +211,46 @@ export class GitHubAdapter implements Adapter {
     const octokit = this.octokit;
     const results: SignalResult[] = [];
 
-    const collectors = [
-      () => withRetry(() => collectGatewaySignal(octokit, repos)),
-      () => withRetry(() => collectSecretsManagementSignal(octokit, repos)),
-      () => withRetry(() => collectPromptManagementSignal(octokit, repos)),
-      () => withRetry(() => collectSteeringFilesSignal(octokit, repos)),
-      () => withRetry(() => collectAIRulesSignal(octokit, repos)),
-      () => withRetry(() => collectAgentTaskPercentSignal(octokit, repos)),
-      () => withRetry(() => collectPipelineScalingSignal(octokit, repos)),
-      () => withRetry(() => collectAICodeReviewSignal(octokit, repos)),
-      () => withRetry(() => collectTestQualitySignal(octokit, repos)),
-      () => withRetry(() => collectPRCycleTimeSignal(octokit, repos)),
-      () => withRetry(() => collectAIArtifactSDLCSignal(octokit, repos)),
-      () => withRetry(() => collectPromptSecuritySignal(octokit, repos)),
-      () => withRetry(() => collectAIAttributionSignal(octokit, repos)),
-      () => withRetry(() => collectTracingSignal(octokit, repos)),
-      () => withRetry(() => collectDocumentationSignal(octokit, repos)),
-      () => withRetry(() => collectSpecAccuracySignal(octokit, repos)),
+    // Each entry pairs a signal with its collector so a failed collector can emit
+    // a zero-score fallback, keeping the output array length equal to this.signals.length.
+    const collectorPairs: Array<{ signal: Signal; run: () => Promise<SignalResult> }> = [
+      { signal: GITHUB_SIGNALS[0]!, run: () => withRetry(() => collectGatewaySignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[1]!, run: () => withRetry(() => collectSecretsManagementSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[2]!, run: () => withRetry(() => collectPromptManagementSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[3]!, run: () => withRetry(() => collectSteeringFilesSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[4]!, run: () => withRetry(() => collectAIRulesSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[5]!, run: () => withRetry(() => collectAgentTaskPercentSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[6]!, run: () => withRetry(() => collectPipelineScalingSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[7]!, run: () => withRetry(() => collectAICodeReviewSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[8]!, run: () => withRetry(() => collectTestQualitySignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[9]!, run: () => withRetry(() => collectPRCycleTimeSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[10]!, run: () => withRetry(() => collectAIArtifactSDLCSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[11]!, run: () => withRetry(() => collectPromptSecuritySignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[12]!, run: () => withRetry(() => collectAIAttributionSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[13]!, run: () => withRetry(() => collectTracingSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[14]!, run: () => withRetry(() => collectDocumentationSignal(octokit, repos)) },
+      { signal: GITHUB_SIGNALS[15]!, run: () => withRetry(() => collectSpecAccuracySignal(octokit, repos)) },
     ];
 
-    for (const collector of collectors) {
+    for (const { signal, run } of collectorPairs) {
       try {
-        const result = await collector();
-        results.push(result);
+        results.push(await run());
       } catch (err) {
-        // Log and continue — partial results are better than a full failure
-        console.warn(`GitHubAdapter: collector failed`, err);
+        console.warn(`GitHubAdapter: collector failed for ${signal.id}`, err);
+        // Emit a zero-score fallback so the output always has one result per signal
+        results.push({
+          signalId: signal.id,
+          questionId: signal.questionId,
+          score: 0,
+          evidence: [
+            {
+              source: "github:error",
+              data: { error: String(err) },
+              summary: "Collector failed — score unavailable.",
+            },
+          ],
+          confidence: 0,
+        });
       }
     }
 
