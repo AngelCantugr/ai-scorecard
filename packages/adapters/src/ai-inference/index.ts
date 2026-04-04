@@ -194,7 +194,8 @@ export class AIInferenceEngine {
       if (existingIdx !== undefined) {
         // Keep whichever occurrence has higher confidence — LLMs occasionally
         // refine an earlier answer in a later duplicate entry.
-        if (item.confidence > validated[existingIdx].confidence) {
+        const existing = validated[existingIdx];
+        if (existing !== undefined && item.confidence > existing.confidence) {
           console.warn(
             `[ai-inference] Duplicate questionId ${item.questionId}; replacing with higher-confidence entry`
           );
