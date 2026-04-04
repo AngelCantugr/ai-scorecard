@@ -4,6 +4,7 @@
     "noEmit": true,
     "rootDir": ".",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@ai-scorecard/core": ["./src/index.ts"]
     }
