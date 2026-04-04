@@ -77,8 +77,16 @@ async function fetchRepoFilePaths(
       .filter((item) => item.type === "blob")
       .map((item) => item.path ?? "")
       .filter(Boolean);
-  } catch {
-    return [];
+  } catch (err) {
+    // Swallow expected HTTP errors (repo not accessible), re-throw unexpected errors
+    const status =
+      err !== null && typeof err === "object" && "status" in err
+        ? (err as { status: number }).status
+        : undefined;
+    if (status === 404 || status === 403) {
+      return [];
+    }
+    throw err;
   }
 }
 
