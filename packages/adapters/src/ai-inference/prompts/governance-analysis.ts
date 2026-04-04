@@ -3,6 +3,7 @@
  */
 
 import type { ContentBundle } from "../types.js";
+import { buildFileList } from "./utils.js";
 
 /** Question rubrics for governance, observability, and cost questions */
 const RUBRICS = {
@@ -55,16 +56,14 @@ const RUBRICS = {
  * Analyzes Q15, Q24, Q26, Q27, Q28, Q29, Q30.
  */
 export function buildGovernanceAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = bundle.files
-    .map((f) => `=== ${f.path} ===\n${f.content}`)
-    .join("\n\n");
+  const fileList = buildFileList(bundle);
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's AI governance, observability, and cost management practices.
 
 ## Repository: ${bundle.source}
 
 ## Files to Analyze
-${fileList || "(no files provided)"}
+${fileList}
 
 ## Questions to Score
 

@@ -155,18 +155,24 @@ export class AIInferenceEngine {
     rawText: string,
     analysisType: string
   ): AIAnalysisResult[] {
-    // Strip markdown code fences if present
-    const cleaned = rawText
-      .replace(/^```(?:json)?\n?/m, "")
-      .replace(/\n?```$/m, "")
-      .trim();
+    // Extract the JSON array directly — more robust than stripping code fences,
+    // since LLMs sometimes include preamble or postamble text even when instructed not to.
+    const jsonStart = rawText.indexOf("[");
+    const jsonEnd = rawText.lastIndexOf("]");
+    if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+      console.error(
+        `[ai-inference] Failed to find JSON array for ${analysisType}. Raw response:\n${rawText.slice(0, 200)}`
+      );
+      return this.fallbackResults(analysisType);
+    }
+    const cleaned = rawText.slice(jsonStart, jsonEnd + 1);
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(cleaned);
     } catch {
       console.error(
-        `[ai-inference] Failed to parse JSON for ${analysisType}. Raw response:\n${rawText}`
+        `[ai-inference] Failed to parse JSON for ${analysisType}. Raw response:\n${rawText.slice(0, 200)}`
       );
       return this.fallbackResults(analysisType);
     }
@@ -180,6 +186,7 @@ export class AIInferenceEngine {
 
     const validated: AIAnalysisResult[] = [];
     const expectedIds = new Set(ANALYSIS_QUESTION_MAP[analysisType] ?? []);
+    const seenIds = new Set<string>();
 
     for (const item of parsed) {
       if (!isAIAnalysisResult(item)) {
@@ -192,6 +199,11 @@ export class AIInferenceEngine {
         );
         continue;
       }
+      if (seenIds.has(item.questionId)) {
+        console.warn(`[ai-inference] Duplicate questionId ${item.questionId} in LLM response; keeping first`);
+        continue;
+      }
+      seenIds.add(item.questionId);
       validated.push(item);
     }
 
@@ -222,7 +234,9 @@ export class AIInferenceEngine {
       signalId: `${SIGNAL_ID_PREFIX}:${result.questionId}`,
       questionId: result.questionId,
       score: result.score,
-      confidence: result.confidence,
+      // Clamp inferred confidence to [0.3, 0.7] per spec; preserve 0 as a sentinel
+      // for questions where the LLM had no content to analyze (missingResult).
+      confidence: result.confidence > 0 ? Math.max(0.3, Math.min(0.7, result.confidence)) : 0,
       evidence: [
         {
           source: "ai-inference",
@@ -259,6 +273,8 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
     typeof v["questionId"] === "string" &&
     (v["score"] === 0 || v["score"] === 1 || v["score"] === 2) &&
     typeof v["confidence"] === "number" &&
+    (v["confidence"] as number) >= 0 &&
+    (v["confidence"] as number) <= 1 &&
     typeof v["reasoning"] === "string" &&
     typeof v["evidence_summary"] === "string"
   );

@@ -3,6 +3,7 @@
  */
 
 import type { ContentBundle } from "../types.js";
+import { buildFileList } from "./utils.js";
 
 /** Question rubrics for architecture questions */
 const RUBRICS = {
@@ -61,16 +62,14 @@ const RUBRICS = {
  * Analyzes Q2, Q3, Q4, Q9, Q10, Q11, Q12, Q19.
  */
 export function buildArchitectureAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = bundle.files
-    .map((f) => `=== ${f.path} ===\n${f.content}`)
-    .join("\n\n");
+  const fileList = buildFileList(bundle);
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's AI platform infrastructure and developer tooling architecture.
 
 ## Repository: ${bundle.source}
 
 ## Files to Analyze
-${fileList || "(no files provided)"}
+${fileList}
 
 ## Questions to Score
 

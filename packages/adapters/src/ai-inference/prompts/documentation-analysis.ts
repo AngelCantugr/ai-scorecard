@@ -3,6 +3,7 @@
  */
 
 import type { ContentBundle } from "../types.js";
+import { buildFileList } from "./utils.js";
 
 /** Question rubrics for documentation/context engineering questions */
 const RUBRICS = {
@@ -31,16 +32,14 @@ const RUBRICS = {
  * Analyzes Q33, Q34, Q35.
  */
 export function buildDocumentationAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = bundle.files
-    .map((f) => `=== ${f.path} ===\n${f.content}`)
-    .join("\n\n");
+  const fileList = buildFileList(bundle);
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's documentation quality and context engineering practices.
 
 ## Repository: ${bundle.source}
 
 ## Files to Analyze
-${fileList || "(no files provided)"}
+${fileList}
 
 ## Questions to Score
 
