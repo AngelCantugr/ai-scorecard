@@ -32,5 +32,5 @@ export function getLowConfidenceQuestions(
 ): QuestionScore[] {
   return result.dimensions
     .flatMap((d) => d.questionScores)
-    .filter((qs) => qs.confidence < threshold);
+    .filter((qs) => qs.confidence > 0 && qs.confidence < threshold);
 }

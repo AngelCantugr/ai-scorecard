@@ -195,3 +195,34 @@ test("getLowConfidenceQuestions respects custom threshold", () => {
   assert.ok(lowConf.some((qs) => qs.questionId === "D1-Q1"));
   assert.ok(!lowConf.some((qs) => qs.questionId === "D1-Q2"));
 });
+
+test("overallConfidence: only includes measured questions (confidence > 0)", () => {
+  const signals = [
+    makeSignal("D1-Q1", 2, 1.0),
+    makeSignal("D1-Q2", 1, 0.5),
+  ];
+  const result = computeScorecard(signals, META);
+
+  // average of 1.0 and 0.5 is 0.75; it should NOT include the 33 unmeasured questions at 0
+  assert.equal(result.overallConfidence, 0.75);
+});
+
+test("getLowConfidenceQuestions: excludes unmeasured questions (confidence 0)", () => {
+  const signals = [
+    makeSignal("D1-Q1", 2, 0.3), // measured, low confidence → included
+  ];
+  const result = computeScorecard(signals, META);
+  const lowConf = getLowConfidenceQuestions(result, 0.5);
+
+  assert.equal(lowConf.length, 1);
+  assert.equal(lowConf[0].questionId, "D1-Q1");
+  // Ensure unmeasured D1-Q2 (which has confidence 0 < 0.5) is NOT here
+  assert.ok(!lowConf.some((qs) => qs.questionId === "D1-Q2"));
+});
+
+test("assessedAt injection: uses provided date", () => {
+  const customDate = new Date("2020-01-01T00:00:00Z");
+  const result = computeScorecard([], META, customDate);
+
+  assert.equal(result.assessedAt.getTime(), customDate.getTime());
+});

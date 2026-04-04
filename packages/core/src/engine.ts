@@ -6,6 +6,7 @@ import type {
   QuestionScore,
   ScorecardResult,
   SignalResult,
+  Tier,
 } from "./types/index.js";
 
 /**
@@ -18,6 +19,7 @@ import type {
 export function computeScorecard(
   signals: SignalResult[],
   metadata: { adapterName: string; target: string },
+  assessedAt: Date = new Date(),
 ): ScorecardResult {
   // 1. Deduplicate signals — keep highest confidence; break ties with higher score
   const dedupedSignals = new Map<string, SignalResult>();
@@ -68,25 +70,25 @@ export function computeScorecard(
 
   // 3. Compute overall score
   const totalScore = dimensionScores.reduce((sum, ds) => sum + ds.score, 0);
-  const maxScore = 70;
-  const percentage = Math.round((totalScore / maxScore) * 100);
+  const maxScore = dimensionScores.reduce((sum, ds) => sum + ds.maxScore, 0);
+  const percentage =
+    maxScore === 0 ? 0 : Math.round((totalScore / maxScore) * 100);
 
   // 4. Determine tier
   const tier =
     tiers.find((t) => totalScore >= t.minScore && totalScore <= t.maxScore) ??
-    tiers[0];
+    (tiers[0] as Tier);
 
-  if (tier === undefined) {
-    throw new Error(`No tier found for score ${totalScore}`);
-  }
+  // 5. Average confidence across only measured questions
+  const measuredQuestionScores = dimensionScores
+    .flatMap((ds) => ds.questionScores)
+    .filter((qs) => qs.confidence > 0);
 
-  // 5. Average confidence across all questions (including unmeasured, confidence 0)
-  const allQuestionScores = dimensionScores.flatMap((ds) => ds.questionScores);
   const overallConfidence =
-    allQuestionScores.length === 0
+    measuredQuestionScores.length === 0
       ? 0
-      : allQuestionScores.reduce((sum, qs) => sum + qs.confidence, 0) /
-        allQuestionScores.length;
+      : measuredQuestionScores.reduce((sum, qs) => sum + qs.confidence, 0) /
+        measuredQuestionScores.length;
 
   return {
     totalScore,
@@ -95,7 +97,7 @@ export function computeScorecard(
     tier,
     dimensions: dimensionScores,
     overallConfidence,
-    assessedAt: new Date(),
+    assessedAt,
     metadata,
   };
 }
