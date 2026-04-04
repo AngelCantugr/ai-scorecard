@@ -51,4 +51,11 @@ export interface BatchAnalysisResult {
   analysisType: string;
   results: AIAnalysisResult[];
   tokenUsage?: TokenUsage;
+  /**
+   * True when the batch failed (LLM API error or unparseable response).
+   * Results will contain zero-confidence fallbacks for all questions in the batch.
+   * Callers can use this to detect silent scoring failures and surface them as
+   * observability signals rather than treating them as low-confidence results.
+   */
+  error?: boolean;
 }

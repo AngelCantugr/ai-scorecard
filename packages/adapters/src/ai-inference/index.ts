@@ -140,53 +140,44 @@ export class AIInferenceEngine {
       rawText = textBlock?.type === "text" ? textBlock.text : "";
     } catch (error) {
       console.error(`[ai-inference] Error in ${analysisType} batch:`, error);
-      return { analysisType, results: this.fallbackResults(analysisType) };
+      return { analysisType, results: this.fallbackResults(analysisType), error: true };
     }
 
-    const parsed = this.parseAnalysisResults(rawText, analysisType);
-    return { analysisType, results: parsed, tokenUsage };
+    const { results, error: parseError } = this.parseAnalysisResults(rawText, analysisType);
+    return { analysisType, results, tokenUsage, ...(parseError && { error: true }) };
   }
 
   /**
    * Parse the raw LLM text response into AIAnalysisResult objects.
-   * Falls back to zero-confidence results if parsing fails.
+   * Falls back to zero-confidence results if parsing fails, and sets error=true
+   * so callers can distinguish a parse failure from a low-confidence result.
    */
   private parseAnalysisResults(
     rawText: string,
     analysisType: string
-  ): AIAnalysisResult[] {
-    // Extract the JSON array directly — more robust than stripping code fences,
-    // since LLMs sometimes include preamble or postamble text even when instructed not to.
-    const jsonStart = rawText.indexOf("[");
-    const jsonEnd = rawText.lastIndexOf("]");
-    if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+  ): { results: AIAnalysisResult[]; error?: true } {
+    // Scan-and-retry: try each '[' position in the text until we find one that
+    // produces a valid JSON array. This handles brackets in LLM preamble text
+    // (e.g., "consider [option A]") without mis-extracting the wrong slice.
+    const parsed = extractJsonArray(rawText);
+    if (!parsed) {
       console.error(
         `[ai-inference] Failed to find JSON array for ${analysisType}. Raw response:\n${rawText.slice(0, 200)}`
       );
-      return this.fallbackResults(analysisType);
-    }
-    const cleaned = rawText.slice(jsonStart, jsonEnd + 1);
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      console.error(
-        `[ai-inference] Failed to parse JSON for ${analysisType}. Raw response:\n${rawText.slice(0, 200)}`
-      );
-      return this.fallbackResults(analysisType);
+      return { results: this.fallbackResults(analysisType), error: true };
     }
 
     if (!Array.isArray(parsed)) {
       console.error(
         `[ai-inference] Expected JSON array for ${analysisType}, got ${typeof parsed}`
       );
-      return this.fallbackResults(analysisType);
+      return { results: this.fallbackResults(analysisType), error: true };
     }
 
     const validated: AIAnalysisResult[] = [];
     const expectedIds = new Set(ANALYSIS_QUESTION_MAP[analysisType] ?? []);
-    const seenIds = new Set<string>();
+    // Index by questionId for O(1) lookup when resolving duplicates.
+    const seenIndex = new Map<string, number>();
 
     for (const item of parsed) {
       if (!isAIAnalysisResult(item)) {
@@ -199,11 +190,23 @@ export class AIInferenceEngine {
         );
         continue;
       }
-      if (seenIds.has(item.questionId)) {
-        console.warn(`[ai-inference] Duplicate questionId ${item.questionId} in LLM response; keeping first`);
+      const existingIdx = seenIndex.get(item.questionId);
+      if (existingIdx !== undefined) {
+        // Keep whichever occurrence has higher confidence — LLMs occasionally
+        // refine an earlier answer in a later duplicate entry.
+        if (item.confidence > validated[existingIdx].confidence) {
+          console.warn(
+            `[ai-inference] Duplicate questionId ${item.questionId}; replacing with higher-confidence entry`
+          );
+          validated[existingIdx] = item;
+        } else {
+          console.warn(
+            `[ai-inference] Duplicate questionId ${item.questionId}; keeping existing higher-confidence entry`
+          );
+        }
         continue;
       }
-      seenIds.add(item.questionId);
+      seenIndex.set(item.questionId, validated.length);
       validated.push(item);
     }
 
@@ -215,7 +218,7 @@ export class AIInferenceEngine {
       }
     }
 
-    return validated;
+    return { results: validated };
   }
 
   /**
@@ -278,6 +281,33 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
     typeof v["reasoning"] === "string" &&
     typeof v["evidence_summary"] === "string"
   );
+}
+
+/**
+ * Extract the first valid JSON array from free-form LLM text.
+ *
+ * Uses scan-and-retry: tries each '[' position in the text until JSON.parse
+ * succeeds and returns an array. This is more robust than indexOf/lastIndexOf
+ * because brackets in LLM preamble text (e.g., "consider [option A]") would
+ * otherwise cause the wrong slice to be extracted.
+ *
+ * Returns null if no valid JSON array is found.
+ */
+function extractJsonArray(text: string): unknown[] | null {
+  let searchFrom = 0;
+  while (true) {
+    const start = text.indexOf("[", searchFrom);
+    if (start === -1) return null;
+    const end = text.lastIndexOf("]");
+    if (end === -1 || end < start) return null;
+    try {
+      const parsed = JSON.parse(text.slice(start, end + 1));
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // This '[' wasn't the start of the target array — advance and try the next one.
+    }
+    searchFrom = start + 1;
+  }
 }
 
 /** Create a zero-confidence result for a question where content is missing */
