@@ -56,7 +56,7 @@ export async function collectPipelineScalingSignal(
   let failedRuns = 0;
   const durationsSec: number[] = [];
 
-  for (const repo of repos.slice(0, 10)) {
+  for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
     const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since);
     totalRuns += runs.length;
@@ -131,7 +131,7 @@ export async function collectTestQualitySignal(
   let testWorkflowsFound = 0;
   let rerunWorkflows = 0;
 
-  for (const repo of repos.slice(0, 10)) {
+  for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
     const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since);
 

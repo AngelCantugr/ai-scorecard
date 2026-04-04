@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",
