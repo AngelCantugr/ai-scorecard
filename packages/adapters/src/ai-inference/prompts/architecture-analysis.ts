@@ -62,7 +62,11 @@ const RUBRICS = {
  * Analyzes Q2, Q3, Q4, Q9, Q10, Q11, Q12, Q19.
  */
 export function buildArchitectureAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = buildFileList(bundle);
+  // Architecture analysis focuses on source code and configuration, not docs.
+  const fileList = buildFileList(bundle, (path) =>
+    /\.(ts|js|tsx|jsx|py|go|java|kt|rb|rs|json|yaml|yml|toml|dockerfile)$/i.test(path) ||
+    /dockerfile|docker-compose|\.github\/|makefile|justfile/i.test(path)
+  );
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's AI platform infrastructure and developer tooling architecture.
 

@@ -20,7 +20,11 @@ const RUBRICS = {
  * Analyzes Q22 (AI usage policy).
  */
 export function buildPolicyAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = buildFileList(bundle);
+  // Policy analysis focuses on governance and policy documents, not source code.
+  const fileList = buildFileList(bundle, (path) =>
+    /\.(md|txt|rst|adoc)$/i.test(path) ||
+    /policy|governance|conduct|security|compliance|legal/i.test(path)
+  );
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's AI governance policies.
 

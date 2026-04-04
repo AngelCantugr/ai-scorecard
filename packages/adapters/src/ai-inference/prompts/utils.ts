@@ -13,14 +13,24 @@ const MAX_PER_FILE_CHARS = 4_000;
 
 /**
  * Build a formatted file listing from a ContentBundle with a character budget.
+ *
+ * When `pathFilter` is provided, only files whose paths match are included.
+ * This keeps each analysis batch focused on relevant files and avoids wasting
+ * token budget on unrelated content (e.g., source files in a policy analysis).
+ *
  * Truncates individual files at MAX_PER_FILE_CHARS and stops adding files once
  * MAX_TOTAL_FILE_CHARS is reached, to stay within model context limits.
  */
-export function buildFileList(bundle: ContentBundle): string {
+export function buildFileList(
+  bundle: ContentBundle,
+  pathFilter?: (path: string) => boolean
+): string {
+  const files = pathFilter ? bundle.files.filter((f) => pathFilter(f.path)) : bundle.files;
+
   let remaining = MAX_TOTAL_FILE_CHARS;
   const parts: string[] = [];
 
-  for (const f of bundle.files) {
+  for (const f of files) {
     if (remaining <= 0) break;
 
     const header = `=== ${f.path} ===\n`;

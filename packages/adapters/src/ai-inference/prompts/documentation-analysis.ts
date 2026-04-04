@@ -32,7 +32,11 @@ const RUBRICS = {
  * Analyzes Q33, Q34, Q35.
  */
 export function buildDocumentationAnalysisPrompt(bundle: ContentBundle): string {
-  const fileList = buildFileList(bundle);
+  // Documentation analysis focuses on markdown and docs, not source code.
+  const fileList = buildFileList(bundle, (path) =>
+    /\.(md|txt|rst|adoc)$/i.test(path) ||
+    /readme|changelog|docs\/|wiki\//i.test(path)
+  );
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's documentation quality and context engineering practices.
 
