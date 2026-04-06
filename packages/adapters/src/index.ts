@@ -4,3 +4,5 @@
  */
 
 export type { Adapter } from "@ai-scorecard/core";
+export { GitHubAdapter } from "./github/index.js";
+export type { GitHubAdapterConfig } from "./github/config.js";
