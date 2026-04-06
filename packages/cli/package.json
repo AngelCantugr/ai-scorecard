@@ -22,7 +22,10 @@
   },
   "dependencies": {
     "@ai-scorecard/adapters": "workspace:*",
-    "@ai-scorecard/core": "workspace:*"
+    "@ai-scorecard/core": "workspace:*",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "ora": "^8.1.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
