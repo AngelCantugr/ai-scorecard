@@ -14,12 +14,14 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "test": "vitest run",
+    "pretest": "tsc --project tsconfig.json",
+    "test": "vitest run src/github/__tests__/github-adapter.test.ts && node --test src/ai-inference/__tests__/ai-inference.test.mjs",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@ai-scorecard/core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.82.0",
     "@octokit/rest": "22.0.1"
   },
   "devDependencies": {
