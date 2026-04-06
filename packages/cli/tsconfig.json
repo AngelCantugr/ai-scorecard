@@ -5,12 +5,7 @@
     "rootDir": "./src",
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "lib": ["ES2022"],
-    "types": ["node"],
-    "baseUrl": ".",
-    "paths": {
-      "@ai-scorecard/core": ["../core/src/index.ts"],
-      "@ai-scorecard/adapters": ["../adapters/src/index.ts"]
-    }
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"],

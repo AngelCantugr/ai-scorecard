@@ -6,6 +6,11 @@ node_modules/
 dist/
 .next/
 *.tsbuildinfo
+# Prevent TypeScript from emitting declaration files into source directories
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+packages/*/src/**/*.js.map
 
 # Environment
 .env
