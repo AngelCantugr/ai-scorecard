@@ -192,10 +192,15 @@ export class AIInferenceEngine {
       }
       const existingIdx = seenIndex.get(item.questionId);
       if (existingIdx !== undefined) {
+        const existing = validated[existingIdx];
+        if (!existing) {
+          validated.push(item);
+          seenIndex.set(item.questionId, validated.length - 1);
+          continue;
+        }
         // Keep whichever occurrence has higher confidence — LLMs occasionally
         // refine an earlier answer in a later duplicate entry.
-        const existing = validated[existingIdx];
-        if (existing !== undefined && item.confidence > existing.confidence) {
+        if (item.confidence > existing.confidence) {
           console.warn(
             `[ai-inference] Duplicate questionId ${item.questionId}; replacing with higher-confidence entry`
           );
