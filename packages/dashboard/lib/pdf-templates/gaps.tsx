@@ -138,6 +138,14 @@ export function GapsPage({
   unaddressed,
   lowConfidence,
 }: GapsPageProps) {
+  // Build a O(1) lookup from questionId → dimensionId to avoid nested iteration
+  const questionToDimension = new Map<string, string>();
+  for (const dim of result.dimensions) {
+    for (const qs of dim.questionScores) {
+      questionToDimension.set(qs.questionId, dim.dimensionId);
+    }
+  }
+
   return (
     <Page size="A4" style={styles.page}>
       <Text style={styles.pageTitle}>Gap Analysis &amp; Recommendations</Text>
@@ -208,10 +216,7 @@ export function GapsPage({
         <Text style={styles.sectionTitle}>Suggested Next Steps by Dimension</Text>
         {result.dimensions.map((dim) => {
           const dimUnaddressed = unaddressed.filter(
-            (qs) =>
-              result.dimensions
-                .find((d) => d.questionScores.some((q) => q.questionId === qs.questionId))
-                ?.dimensionId === dim.dimensionId,
+            (qs) => questionToDimension.get(qs.questionId) === dim.dimensionId,
           ).length;
           return (
             <View key={dim.dimensionId} style={styles.nextStepItem}>
