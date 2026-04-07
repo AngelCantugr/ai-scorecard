@@ -4,16 +4,20 @@
  * CLI entry point — parses arguments and dispatches to commands.
  */
 
-import { program } from "commander";
+import { createRequire } from "module";
+import { program, Option } from "commander";
 import { loadConfig } from "./utils/config.js";
 import { runAssess } from "./commands/assess.js";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
 
 const config = loadConfig();
 
 program
   .name("ai-scorecard")
   .description("Run AI adoption assessments against a GitHub organization")
-  .version("0.0.0");
+  .version(version);
 
 program
   .command("assess")
@@ -39,16 +43,22 @@ program
     "AI model to use for inference",
     config.ai?.model,
   )
-  .option(
-    "--output <format>",
-    "Output format: table (default), json, or markdown",
-    config.output ?? "table",
+  .addOption(
+    new Option("--output <format>", "Output format: table (default), json, or markdown")
+      .choices(["table", "json", "markdown"])
+      .default(config.output ?? "table"),
   )
   .option("--repos <repos>", "Comma-separated list of repo names to assess")
   .option(
     "--max-repos <n>",
     "Maximum number of repos to scan",
-    (v) => parseInt(v, 10),
+    (v) => {
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 1) {
+        throw new Error(`--max-repos must be a positive integer, got: ${v}`);
+      }
+      return n;
+    },
     config.github?.maxRepos ?? 50,
   )
   .option("--dry-run", "Show what would be analyzed without making API calls")
@@ -59,23 +69,18 @@ program
       aiInference?: boolean;
       anthropicKey?: string;
       model?: string;
-      output?: string;
+      output?: "table" | "json" | "markdown";
       repos?: string;
       maxRepos?: number;
       dryRun?: boolean;
     }) => {
-      const outputFormat = (opts.output ?? "table") as
-        | "table"
-        | "json"
-        | "markdown";
-
       runAssess({
         ...(opts.githubOrg !== undefined ? { githubOrg: opts.githubOrg } : {}),
         ...(opts.githubToken !== undefined ? { githubToken: opts.githubToken } : {}),
         ...(opts.aiInference !== undefined ? { aiInference: opts.aiInference } : {}),
         ...(opts.anthropicKey !== undefined ? { anthropicKey: opts.anthropicKey } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
-        output: outputFormat,
+        output: opts.output ?? "table",
         ...(opts.repos !== undefined ? { repos: opts.repos } : {}),
         ...(opts.maxRepos !== undefined ? { maxRepos: opts.maxRepos } : {}),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
@@ -87,4 +92,3 @@ program
   );
 
 program.parse();
-
