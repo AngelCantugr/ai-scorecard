@@ -63,6 +63,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  if (repos !== undefined && !Array.isArray(repos)) {
+    return NextResponse.json(
+      { error: "Field 'repos' must be an array of strings." },
+      { status: 400 }
+    );
+  }
+
   if (enableAI && (!anthropicKey || anthropicKey.trim() === "")) {
     return NextResponse.json(
       { error: "anthropicKey is required when enableAI is true." },
@@ -126,6 +133,7 @@ async function runAssessment(opts: RunOptions) {
 
   // 2. Optionally run AI inference
   let aiSignals: SignalResult[] = [];
+  let aiSucceeded = false;
   if (enableAI && anthropicKey) {
     try {
       const bundle = await buildContentBundle(
@@ -140,6 +148,7 @@ async function runAssessment(opts: RunOptions) {
       };
       const aiEngine = new AIInferenceEngine(aiConfig);
       aiSignals = await aiEngine.analyze(bundle);
+      aiSucceeded = true;
     } catch (err) {
       // AI inference failure is non-fatal; continue without AI signals
       console.warn("AI inference failed, continuing without AI signals:", err);
@@ -149,7 +158,7 @@ async function runAssessment(opts: RunOptions) {
   // 3. Compute scorecard from all collected signals
   const allSignals = [...githubSignals, ...aiSignals];
   const result = computeScorecard(allSignals, {
-    adapterName: enableAI ? "github+ai" : "github",
+    adapterName: aiSucceeded ? "github+ai" : "github",
     target: org,
   });
 
