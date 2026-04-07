@@ -18,11 +18,13 @@ export function ShareButton({ encodedQuery }: ShareButtonProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback: select a temporary input
+      // Fallback for non-HTTPS contexts (e.g., HTTP development environments)
+      // where the Clipboard API requires a secure context.
       const input = document.createElement("input");
       input.value = url;
       document.body.appendChild(input);
       input.select();
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       document.execCommand("copy");
       document.body.removeChild(input);
       setCopied(true);
