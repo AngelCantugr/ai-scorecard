@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ScorecardResult } from "@ai-scorecard/core";
+import { encodeResults, decodeResults } from "@ai-scorecard/core";
 import { ScoreCard } from "@/components/ScoreCard";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ShareButton } from "@/components/Share/ShareButton";
+import { SharedBanner } from "@/components/Share/SharedBanner";
 
 export default function ResultsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [result, setResult] = useState<ScorecardResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isShared, setIsShared] = useState(false);
+  const [encodedQuery, setEncodedQuery] = useState<string | null>(null);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!result) return;
@@ -32,6 +38,23 @@ export default function ResultsPage() {
   }, [result]);
 
   useEffect(() => {
+    // Check for shared URL params first
+    const scoresParam = searchParams.get("s");
+    if (scoresParam) {
+      try {
+        const decoded = decodeResults(searchParams.toString());
+        setResult(decoded);
+        setIsShared(true);
+        setEncodedQuery(searchParams.toString());
+      } catch (err) {
+        setError(
+          `Invalid shared link: ${err instanceof Error ? err.message : "Unknown error"}. Please run a new assessment.`
+        );
+      }
+      return;
+    }
+
+    // Fall back to sessionStorage for normal assessment flow
     try {
       const raw = sessionStorage.getItem("scorecard_result");
       if (!raw) {
@@ -40,10 +63,11 @@ export default function ResultsPage() {
       }
       const parsed = JSON.parse(raw) as ScorecardResult;
       setResult(parsed);
+      setEncodedQuery(encodeResults(parsed));
     } catch {
       setError("Failed to parse scorecard data.");
     }
-  }, []);
+  }, [searchParams]);
 
   if (error) {
     return (
@@ -64,6 +88,13 @@ export default function ResultsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      {isShared && (
+        <SharedBanner
+          org={result.metadata.target}
+          date={result.assessedAt}
+        />
+      )}
+
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Assessment Results</h1>
@@ -84,10 +115,13 @@ export default function ResultsPage() {
           >
             📄 {pdfLoading ? "Generating…" : "Download PDF"}
           </Button>
-          {/* Share button placeholder — implemented in issue #13 */}
-          <Button variant="secondary" size="sm" disabled title="Share link coming soon (issue #13)">
-            🔗 Share
-          </Button>
+          {encodedQuery ? (
+            <ShareButton encodedQuery={encodedQuery} />
+          ) : (
+            <Button variant="secondary" size="sm" disabled>
+              🔗 Share
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => router.push("/assess")}>
             ← New Assessment
           </Button>
@@ -95,7 +129,6 @@ export default function ResultsPage() {
         {pdfError && <p className="text-sm text-red-400">{pdfError}</p>}
       </div>
 
-      {/* ScoreCard — full visualization implemented in issue #11 */}
       <ScoreCard result={result} />
     </div>
   );
