@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "paths": {}
+    "paths": {
+      "@ai-scorecard/core": ["../core/dist/index.d.ts"]
+    }
   },
   "exclude": ["node_modules", "dist", "src/**/__tests__/**", "src/**/*.test.ts"]
 }
