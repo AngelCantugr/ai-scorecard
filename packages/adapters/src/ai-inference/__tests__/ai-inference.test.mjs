@@ -61,13 +61,12 @@ test("AI_INFERENCE_QUESTION_IDS exports the correct 19 question IDs", () => {
     "D5-Q29",
     "D5-Q30",
   ];
-  assert.equal(AI_INFERENCE_QUESTION_IDS.length, expected.length);
-  for (const id of expected) {
-    assert.ok(
-      AI_INFERENCE_QUESTION_IDS.includes(id),
-      `Missing question ID: ${id}`
-    );
-  }
+  assert.deepEqual(
+    new Set(AI_INFERENCE_QUESTION_IDS),
+    new Set(expected),
+    "AI_INFERENCE_QUESTION_IDS content does not match expected set"
+  );
+  assert.equal(AI_INFERENCE_QUESTION_IDS.length, expected.length, "Duplicate IDs detected");
 });
 
 test("AIInferenceEngine constructor does not throw", () => {
