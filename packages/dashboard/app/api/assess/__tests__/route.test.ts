@@ -76,6 +76,56 @@ describe("POST /api/assess — input validation", () => {
     expect(body.error).toMatch(/repos/i);
   });
 
+  it("returns 400 when repos contains a non-string entry", async () => {
+    const res = await POST(
+      makeRequest({ org: "my-org", token: "ghp_test", repos: ["valid-repo", 42] })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toMatch(/repos/i);
+  });
+
+  it("returns 400 when repos contains an empty string", async () => {
+    const res = await POST(
+      makeRequest({ org: "my-org", token: "ghp_test", repos: ["valid-repo", ""] })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when maxRepos is not an integer", async () => {
+    const res = await POST(
+      makeRequest({ org: "my-org", token: "ghp_test", maxRepos: "lots" })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toMatch(/maxRepos/i);
+  });
+
+  it("returns 400 when maxRepos is a float", async () => {
+    const res = await POST(
+      makeRequest({ org: "my-org", token: "ghp_test", maxRepos: 3.5 })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("clamps maxRepos to 500 for values above the max", async () => {
+    const { computeScorecard } = await import("@ai-scorecard/core");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+
+    const res = await POST(
+      makeRequest({ org: "my-org", token: "ghp_test", maxRepos: 9999 })
+    );
+    expect(res.status).toBe(200);
+    // GitHubAdapter.connect should have been called with maxRepos clamped to 500
+    const { GitHubAdapter } = await import("@ai-scorecard/adapters");
+    const connectCall = vi.mocked(GitHubAdapter).mock.results[0]?.value?.connect;
+    expect(connectCall).toHaveBeenCalledWith(
+      expect.objectContaining({ maxRepos: 500 })
+    );
+    vi.unstubAllGlobals();
+    void computeScorecard; // used via side-effect
+  });
+
   it("returns 400 when enableAI is true but anthropicKey is absent", async () => {
     const res = await POST(
       makeRequest({ org: "my-org", token: "ghp_test", enableAI: true })

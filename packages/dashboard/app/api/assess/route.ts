@@ -70,6 +70,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  if (
+    repos !== undefined &&
+    !repos.every((r) => typeof r === "string" && r.trim() !== "")
+  ) {
+    return NextResponse.json(
+      { error: "Each entry in 'repos' must be a non-empty string." },
+      { status: 400 }
+    );
+  }
+
   if (enableAI && (!anthropicKey || anthropicKey.trim() === "")) {
     return NextResponse.json(
       { error: "anthropicKey is required when enableAI is true." },
@@ -77,21 +87,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Run assessment with a timeout
+  const rawMaxRepos = Number(maxRepos ?? 50);
+  if (!Number.isFinite(rawMaxRepos) || !Number.isInteger(rawMaxRepos)) {
+    return NextResponse.json(
+      { error: "Field 'maxRepos' must be an integer." },
+      { status: 400 }
+    );
+  }
+  const clampedMaxRepos = Math.max(1, Math.min(500, rawMaxRepos));
+
+  // AbortController so we can cancel in-flight fetch calls when the timeout fires
+  const controller = new AbortController();
+
   const assessmentPromise = runAssessment({
     org: org.trim(),
     token: token.trim(),
     repos: repos ?? [],
     enableAI: enableAI ?? false,
     anthropicKey: anthropicKey?.trim() ?? "",
-    maxRepos: maxRepos ?? 50,
+    maxRepos: clampedMaxRepos,
+    signal: controller.signal,
   });
 
   const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(
-      () => reject(new Error("Assessment timed out after 5 minutes.")),
-      ASSESSMENT_TIMEOUT_MS
-    )
+    setTimeout(() => {
+      controller.abort();
+      reject(new Error("Assessment timed out after 5 minutes."));
+    }, ASSESSMENT_TIMEOUT_MS)
   );
 
   try {
@@ -114,10 +136,11 @@ interface RunOptions {
   enableAI: boolean;
   anthropicKey: string;
   maxRepos: number;
+  signal: AbortSignal;
 }
 
 async function runAssessment(opts: RunOptions) {
-  const { org, token, repos, enableAI, anthropicKey, maxRepos } = opts;
+  const { org, token, repos, enableAI, anthropicKey, maxRepos, signal } = opts;
 
   // 1. Set up GitHub adapter and collect signals
   const githubConfig: GitHubAdapterConfig = {
@@ -140,7 +163,8 @@ async function runAssessment(opts: RunOptions) {
         token,
         org,
         repos.length > 0 ? repos : undefined,
-        maxRepos
+        maxRepos,
+        signal
       );
       const aiConfig: AIInferenceConfig = {
         provider: "anthropic",
@@ -175,16 +199,22 @@ interface GitHubFileContent {
   encoding?: string;
 }
 
+/** Maximum repos sampled for AI content bundles — keeps prompt size bounded. */
+const AI_BUNDLE_REPO_CAP = 5;
+
 /**
  * Build a content bundle by fetching key AI-related files from the org's repos
  * using the GitHub REST API directly via fetch.
- * Fetches up to 5 repos to keep the bundle size reasonable.
+ * Samples up to AI_BUNDLE_REPO_CAP repos to keep the bundle size bounded.
+ * When the caller supplied more repos than the cap, the excess are noted in
+ * the bundle metadata so consumers can surface a warning.
  */
 async function buildContentBundle(
   token: string,
   org: string,
   allowedRepos: string[] | undefined,
-  maxRepos: number
+  maxRepos: number,
+  signal: AbortSignal
 ): Promise<ContentBundle> {
   const files: Array<{ path: string; content: string }> = [];
   const headers = {
@@ -195,21 +225,24 @@ async function buildContentBundle(
 
   // Determine which repos to fetch content from
   let repoNames: string[] = [];
+  let truncatedRepos: string[] = [];
   if (allowedRepos && allowedRepos.length > 0) {
-    repoNames = allowedRepos.slice(0, 5);
+    repoNames = allowedRepos.slice(0, AI_BUNDLE_REPO_CAP);
+    truncatedRepos = allowedRepos.slice(AI_BUNDLE_REPO_CAP);
   } else {
     try {
-      const limit = Math.min(5, maxRepos);
+      const limit = Math.min(AI_BUNDLE_REPO_CAP, maxRepos);
       const res = await fetch(
         `https://api.github.com/orgs/${encodeURIComponent(org)}/repos?sort=pushed&direction=desc&per_page=${limit}&type=all`,
-        { headers }
+        { headers, signal }
       );
       if (res.ok) {
         const data = (await res.json()) as GitHubRepo[];
         repoNames = data.map((r) => r.name);
       }
-    } catch {
-      // Ignore errors in content fetching
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") throw err;
+      // Other errors during repo discovery are non-fatal
     }
   }
 
@@ -219,7 +252,7 @@ async function buildContentBundle(
       try {
         const res = await fetch(
           `https://api.github.com/repos/${encodeURIComponent(org)}/${encodeURIComponent(repoName)}/contents/${filePath}`,
-          { headers }
+          { headers, signal }
         );
         if (res.ok) {
           const data = (await res.json()) as GitHubFileContent;
@@ -235,7 +268,8 @@ async function buildContentBundle(
             files.push({ path: `${repoName}/${filePath}`, content });
           }
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") throw err;
         // File doesn't exist in this repo — skip
       }
     }
@@ -244,6 +278,10 @@ async function buildContentBundle(
   return {
     source: `github:${org}`,
     files,
-    metadata: { org, repoNames },
+    metadata: {
+      org,
+      repoNames,
+      ...(truncatedRepos.length > 0 ? { truncatedRepos } : {}),
+    },
   };
 }
