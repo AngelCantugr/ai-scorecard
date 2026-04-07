@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ScorecardResult } from "@ai-scorecard/core";
 import { ScoreCard } from "@/components/ScoreCard";
@@ -11,6 +11,22 @@ export default function ResultsPage() {
   const router = useRouter();
   const [result, setResult] = useState<ScorecardResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!result) return;
+    setPdfLoading(true);
+    try {
+      // Dynamic import keeps @react-pdf/renderer out of the initial bundle
+      // and avoids SSR issues with Next.js
+      const { downloadPdf } = await import("@/lib/pdf");
+      await downloadPdf(result);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [result]);
 
   useEffect(() => {
     try {
@@ -58,14 +74,14 @@ export default function ResultsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {/* PDF export placeholder — implemented in issue #12 */}
           <Button
             variant="secondary"
             size="sm"
-            disabled
-            title="PDF export coming soon (issue #12)"
+            loading={pdfLoading}
+            onClick={() => { void handleDownloadPdf(); }}
+            title="Download PDF report"
           >
-            📄 Export PDF
+            📄 {pdfLoading ? "Generating…" : "Download PDF"}
           </Button>
           {/* Share button placeholder — implemented in issue #13 */}
           <Button
