@@ -6,8 +6,8 @@ node_modules/
 dist/
 .next/
 *.tsbuildinfo
-# Prevent TypeScript from emitting declaration files into source directories
-packages/*/src/**/*.js
+# Prevent TypeScript from emitting declaration/map files into source directories
+# Only generated artifacts — intentional .js source files are not affected
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.d.ts.map
 packages/*/src/**/*.js.map
