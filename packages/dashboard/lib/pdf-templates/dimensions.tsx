@@ -2,12 +2,14 @@ import { Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { ScorecardResult, DimensionScore, Question } from "@ai-scorecard/core";
 
 const DIM_COLORS = [
-  "#6366f1",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#06b6d4",
+  "#6366f1", // D1
+  "#8b5cf6", // D2
+  "#ec4899", // D3
+  "#f59e0b", // D4
+  "#10b981", // D5
+  "#06b6d4", // D6
+  "#f97316", // D7 (Agent Maturity)
+  "#e11d48", // D8 (Eval & Quality)
 ];
 
 const styles = StyleSheet.create({

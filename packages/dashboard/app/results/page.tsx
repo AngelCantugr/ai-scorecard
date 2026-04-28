@@ -12,9 +12,11 @@ export default function ResultsPage() {
   const [result, setResult] = useState<ScorecardResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!result) return;
+    setPdfError(null);
     setPdfLoading(true);
     try {
       // Dynamic import keeps @react-pdf/renderer out of the initial bundle
@@ -23,6 +25,7 @@ export default function ResultsPage() {
       await downloadPdf(result);
     } catch (err) {
       console.error("PDF generation failed:", err);
+      setPdfError("PDF generation failed. Please try again.");
     } finally {
       setPdfLoading(false);
     }
@@ -100,6 +103,9 @@ export default function ResultsPage() {
             ← New Assessment
           </Button>
         </div>
+        {pdfError && (
+          <p className="text-sm text-red-400">{pdfError}</p>
+        )}
       </div>
 
       {/* ScoreCard — full visualization implemented in issue #11 */}
