@@ -5,13 +5,17 @@ import { NextRequest } from "next/server";
 // Mock workspace packages so tests don't need a real GitHub token / Anthropic key
 // ---------------------------------------------------------------------------
 vi.mock("@ai-scorecard/adapters", () => ({
-  GitHubAdapter: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    collect: vi.fn().mockResolvedValue([]),
-  })),
-  AIInferenceEngine: vi.fn().mockImplementation(() => ({
-    analyze: vi.fn().mockResolvedValue([]),
-  })),
+  GitHubAdapter: vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      collect: vi.fn().mockResolvedValue([]),
+    };
+  }),
+  AIInferenceEngine: vi.fn().mockImplementation(function () {
+    return {
+      analyze: vi.fn().mockResolvedValue([]),
+    };
+  }),
 }));
 
 vi.mock("@ai-scorecard/core", () => ({
@@ -172,9 +176,11 @@ describe("POST /api/assess — adapterName accuracy", () => {
     const { AIInferenceEngine } = await import("@ai-scorecard/adapters");
     const { computeScorecard } = await import("@ai-scorecard/core");
 
-    vi.mocked(AIInferenceEngine).mockImplementationOnce(() => ({
-      analyze: vi.fn().mockRejectedValue(new Error("Anthropic API error")),
-    }));
+    vi.mocked(AIInferenceEngine).mockImplementationOnce(function () {
+      return {
+        analyze: vi.fn().mockRejectedValue(new Error("Anthropic API error")),
+      };
+    });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
     const res = await POST(
