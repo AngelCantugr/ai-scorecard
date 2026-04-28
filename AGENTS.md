@@ -21,7 +21,7 @@ packages/core       → Scoring engine: rules + AI inference → normalized scor
         └──► packages/dashboard  → Continuous monitoring web UI (Next.js)
 ```
 
-Data always flows **adapters → core → cli/dashboard**. Never import `core` from `adapters`
+Data always flows **adapters → core → cli/dashboard**. Never import `adapters` from `core`
 or `dashboard` from `cli`.
 
 ---
