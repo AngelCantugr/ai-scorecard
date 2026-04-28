@@ -45,9 +45,7 @@ function sectionHeader(title: string): string {
 /** Render a 12-char progress bar */
 function progressBar(percentage: number, width = 12): string {
   const filled = Math.round((percentage / 100) * width);
-  const bar =
-    chalk.green("█".repeat(filled)) +
-    chalk.gray("░".repeat(width - filled));
+  const bar = chalk.green("█".repeat(filled)) + chalk.gray("░".repeat(width - filled));
   return bar;
 }
 
@@ -104,20 +102,14 @@ export function outputTable(result: ScorecardResult): void {
   // Overall score
   lines.push(
     row(
-      `Overall Score: ${chalk.bold(`${result.totalScore}/${result.maxScore}`)} (${result.percentage}%)`,
-    ),
+      `Overall Score: ${chalk.bold(`${result.totalScore}/${result.maxScore}`)} (${result.percentage}%)`
+    )
   );
   const emoji = tierEmoji(result.tier.level);
   lines.push(
-    row(
-      `Maturity Tier: ${emoji} Level ${result.tier.level} — ${chalk.bold(result.tier.label)}`,
-    ),
+    row(`Maturity Tier: ${emoji} Level ${result.tier.level} — ${chalk.bold(result.tier.label)}`)
   );
-  lines.push(
-    row(
-      `Confidence: ${Math.round(result.overallConfidence * 100)}%`,
-    ),
-  );
+  lines.push(row(`Confidence: ${Math.round(result.overallConfidence * 100)}%`));
   lines.push(row(""));
 
   // Dimension breakdown

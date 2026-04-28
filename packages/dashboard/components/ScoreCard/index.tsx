@@ -39,11 +39,7 @@ export function ScoreCard({ result }: ScoreCardProps) {
             </p>
           </div>
           <div className="flex flex-col items-center">
-            <svg
-              viewBox="0 0 36 36"
-              className="h-24 w-24"
-              aria-label={`${result.percentage}%`}
-            >
+            <svg viewBox="0 0 36 36" className="h-24 w-24" aria-label={`${result.percentage}%`}>
               <path
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 fill="none"
@@ -74,15 +70,11 @@ export function ScoreCard({ result }: ScoreCardProps) {
 
       {/* Dimension breakdown */}
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-white">
-          Dimension Breakdown
-        </h2>
+        <h2 className="mb-3 text-lg font-semibold text-white">Dimension Breakdown</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {result.dimensions.map((dim) => (
             <Card key={dim.dimensionId} padding="sm">
-              <p className="mb-1 text-xs font-medium text-slate-400">
-                {dim.name}
-              </p>
+              <p className="mb-1 text-xs font-medium text-slate-400">{dim.name}</p>
               <p className="text-xl font-bold text-white">
                 {dim.score}
                 <span className="text-sm text-slate-400">/{dim.maxScore}</span>
@@ -97,9 +89,7 @@ export function ScoreCard({ result }: ScoreCardProps) {
                   aria-valuemax={100}
                 />
               </div>
-              <p className="mt-1 text-right text-xs text-slate-400">
-                {dim.percentage}%
-              </p>
+              <p className="mt-1 text-right text-xs text-slate-400">{dim.percentage}%</p>
             </Card>
           ))}
         </div>
@@ -114,9 +104,7 @@ export function ScoreCard({ result }: ScoreCardProps) {
           </div>
           <div>
             <dt className="text-slate-400">Adapter</dt>
-            <dd className="font-medium text-white">
-              {result.metadata.adapterName}
-            </dd>
+            <dd className="font-medium text-white">{result.metadata.adapterName}</dd>
           </div>
           <div>
             <dt className="text-slate-400">Assessed At</dt>

@@ -9,10 +9,7 @@ const sizeClasses = {
   lg: "h-12 w-12",
 };
 
-export function LoadingSpinner({
-  size = "md",
-  label = "Loading…",
-}: LoadingSpinnerProps) {
+export function LoadingSpinner({ size = "md", label = "Loading…" }: LoadingSpinnerProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-3" role="status">
       <svg

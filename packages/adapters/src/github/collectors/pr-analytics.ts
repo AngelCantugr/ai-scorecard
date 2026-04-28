@@ -141,8 +141,7 @@ export async function collectAgentTaskPercentSignal(
       });
 
       const hasAIBody =
-        pr.body !== null &&
-        AI_ATTRIBUTION_PATTERNS.some((p) => p.test(pr.body ?? ""));
+        pr.body !== null && AI_ATTRIBUTION_PATTERNS.some((p) => p.test(pr.body ?? ""));
 
       if (hasAICommit || hasAIBody) {
         aiAttributedPRs++;
@@ -243,8 +242,7 @@ export async function collectPRCycleTimeSignal(
 
     for (const pr of prs) {
       if (pr.mergedAt !== null) {
-        const cycleTimeHours =
-          (pr.mergedAt.getTime() - pr.createdAt.getTime()) / (1000 * 60 * 60);
+        const cycleTimeHours = (pr.mergedAt.getTime() - pr.createdAt.getTime()) / (1000 * 60 * 60);
         cycleTimes.push(cycleTimeHours);
       }
     }
@@ -346,9 +344,7 @@ export async function collectAIArtifactSDLCSignal(
         since: since.toISOString(),
         per_page: 30,
       });
-      const aiRelatedCommits = commits.filter((c) =>
-        aiConfigFilePatterns.test(c.commit.message)
-      );
+      const aiRelatedCommits = commits.filter((c) => aiConfigFilePatterns.test(c.commit.message));
 
       if (foundReviewedPR) {
         reviewedRepos.push(repo.fullName);

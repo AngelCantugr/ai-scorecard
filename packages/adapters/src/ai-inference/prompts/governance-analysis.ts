@@ -57,9 +57,11 @@ const RUBRICS = {
  */
 export function buildGovernanceAnalysisPrompt(bundle: ContentBundle): string {
   // Governance analysis focuses on CI/CD workflows, licenses, and changelogs.
-  const fileList = buildFileList(bundle, (path) =>
-    /\.(yml|yaml|json)$/i.test(path) ||
-    /\.github\/|changelog|license|codeowners|dependabot|renovate/i.test(path)
+  const fileList = buildFileList(
+    bundle,
+    (path) =>
+      /\.(yml|yaml|json)$/i.test(path) ||
+      /\.github\/|changelog|license|codeowners|dependabot|renovate/i.test(path)
   );
 
   return `You are an AI maturity analyst. Analyze the following repository files to score the organization's AI governance, observability, and cost management practices.
