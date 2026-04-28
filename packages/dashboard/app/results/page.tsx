@@ -77,7 +77,9 @@ export default function ResultsPage() {
             variant="secondary"
             size="sm"
             loading={pdfLoading}
-            onClick={() => { void handleDownloadPdf(); }}
+            onClick={() => {
+              void handleDownloadPdf();
+            }}
             title="Download PDF report"
           >
             📄 {pdfLoading ? "Generating…" : "Download PDF"}
@@ -90,9 +92,7 @@ export default function ResultsPage() {
             ← New Assessment
           </Button>
         </div>
-        {pdfError && (
-          <p className="text-sm text-red-400">{pdfError}</p>
-        )}
+        {pdfError && <p className="text-sm text-red-400">{pdfError}</p>}
       </div>
 
       {/* ScoreCard — full visualization implemented in issue #11 */}

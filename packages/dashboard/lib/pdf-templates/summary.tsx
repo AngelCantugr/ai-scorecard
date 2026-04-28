@@ -160,18 +160,14 @@ export function SummaryPage({ result }: SummaryPageProps) {
     TIER_DESCRIPTIONS[result.tier.level] ??
     "Maturity assessment based on 35 questions across 6 dimensions.";
 
-  const sortedDims = [...result.dimensions].sort(
-    (a, b) => b.percentage - a.percentage,
-  );
+  const sortedDims = [...result.dimensions].sort((a, b) => b.percentage - a.percentage);
   const strengths = sortedDims.slice(0, 3);
   const gaps = sortedDims.slice(-3).reverse();
 
   return (
     <Page size="A4" style={styles.page}>
       <Text style={styles.pageTitle}>Executive Summary</Text>
-      <Text style={styles.pageSub}>
-        High-level view of AI adoption maturity and key findings
-      </Text>
+      <Text style={styles.pageSub}>High-level view of AI adoption maturity and key findings</Text>
 
       {/* Score overview */}
       <View style={styles.section}>
@@ -225,13 +221,10 @@ export function SummaryPage({ result }: SummaryPageProps) {
         <Text style={styles.sectionTitle}>Assessment Confidence</Text>
         <View style={styles.confidenceRow}>
           <Text style={styles.confidenceLabel}>
-            Overall confidence is a weighted average of per-signal confidence
-            scores. Higher confidence means the assessment relied on direct
-            measurements rather than inference.
+            Overall confidence is a weighted average of per-signal confidence scores. Higher
+            confidence means the assessment relied on direct measurements rather than inference.
           </Text>
-          <Text style={styles.confidenceValue}>
-            {Math.round(result.overallConfidence * 100)}%
-          </Text>
+          <Text style={styles.confidenceValue}>{Math.round(result.overallConfidence * 100)}%</Text>
         </View>
       </View>
     </Page>

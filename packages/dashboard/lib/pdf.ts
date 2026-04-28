@@ -20,12 +20,14 @@ function buildDocument(result: ScorecardResult) {
   const unaddressed = getUnaddressedQuestions(result);
   const lowConfidence = getLowConfidenceQuestions(result, 0.5);
 
-  return createElement(Document, { title: "AI Adoption Scorecard" },
+  return createElement(
+    Document,
+    { title: "AI Adoption Scorecard" },
     createElement(CoverPage, { result }),
     createElement(SummaryPage, { result }),
     createElement(DimensionsPage, { result, questions }),
     createElement(GapsPage, { result, questions, unaddressed, lowConfidence }),
-    createElement(MethodologyPage, { result }),
+    createElement(MethodologyPage, { result })
   );
 }
 
@@ -45,9 +47,7 @@ export async function downloadPdf(result: ScorecardResult): Promise<void> {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .toLowerCase();
-  const dateStr = new Date(result.assessedAt)
-    .toISOString()
-    .slice(0, 10); // YYYY-MM-DD
+  const dateStr = new Date(result.assessedAt).toISOString().slice(0, 10); // YYYY-MM-DD
   const filename = `ai-scorecard-${orgSlug}-${dateStr}.pdf`;
 
   const url = URL.createObjectURL(blob);

@@ -99,17 +99,12 @@ interface MethodologyPageProps {
 }
 
 export function MethodologyPage({ result }: MethodologyPageProps) {
-  const totalQuestions = result.dimensions.reduce(
-    (sum, d) => sum + d.questionScores.length,
-    0,
-  );
+  const totalQuestions = result.dimensions.reduce((sum, d) => sum + d.questionScores.length, 0);
 
   return (
     <Page size="A4" style={styles.page}>
       <Text style={styles.pageTitle}>Methodology</Text>
-      <Text style={styles.pageSub}>
-        How this scorecard is calculated and what it measures
-      </Text>
+      <Text style={styles.pageSub}>How this scorecard is calculated and what it measures</Text>
 
       {/* Scoring model */}
       <View style={styles.section}>
@@ -119,14 +114,14 @@ export function MethodologyPage({ result }: MethodologyPageProps) {
           <Text style={styles.cardText}>
             Each of the {totalQuestions} questions is scored on a 0–1–2 scale:{"\n"}
             {"  "}
-            <Text style={{ color: "#f87171" }}>0 — Not adopted.</Text> The
-            practice is absent or negligible.{"\n"}
+            <Text style={{ color: "#f87171" }}>0 — Not adopted.</Text> The practice is absent or
+            negligible.{"\n"}
             {"  "}
-            <Text style={{ color: "#facc15" }}>1 — Partially adopted.</Text>{" "}
-            Inconsistent or limited rollout.{"\n"}
+            <Text style={{ color: "#facc15" }}>1 — Partially adopted.</Text> Inconsistent or limited
+            rollout.{"\n"}
             {"  "}
-            <Text style={{ color: "#4ade80" }}>2 — Fully adopted.</Text> Mature,
-            consistent, and measurable practice.
+            <Text style={{ color: "#4ade80" }}>2 — Fully adopted.</Text> Mature, consistent, and
+            measurable practice.
           </Text>
         </View>
         <View style={styles.grid}>
@@ -153,17 +148,14 @@ export function MethodologyPage({ result }: MethodologyPageProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Data Sources</Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Adapter: {result.metadata.adapterName}
-          </Text>
+          <Text style={styles.cardTitle}>Adapter: {result.metadata.adapterName}</Text>
           <Text style={styles.cardText}>
             Target: {result.metadata.target}
             {"\n"}
-            Assessment signals were gathered by the{" "}
-            {result.metadata.adapterName} adapter, which scanned repositories,
-            configuration files, and workflow definitions to produce evidence for
-            each question. Signals are normalized to a 0–1 confidence score
-            reflecting measurement reliability.
+            Assessment signals were gathered by the {result.metadata.adapterName} adapter, which
+            scanned repositories, configuration files, and workflow definitions to produce evidence
+            for each question. Signals are normalized to a 0–1 confidence score reflecting
+            measurement reliability.
           </Text>
         </View>
       </View>
@@ -173,10 +165,9 @@ export function MethodologyPage({ result }: MethodologyPageProps) {
         <Text style={styles.sectionTitle}>Confidence Score</Text>
         <View style={styles.card}>
           <Text style={styles.cardText}>
-            Each signal carries a confidence value (0–1). Direct file scans
-            return high confidence (0.9–1.0). AI-inferred signals return lower
-            confidence (0.4–0.6). The overall confidence is the mean across all
-            signals and reflects the reliability of this assessment.
+            Each signal carries a confidence value (0–1). Direct file scans return high confidence
+            (0.9–1.0). AI-inferred signals return lower confidence (0.4–0.6). The overall confidence
+            is the mean across all signals and reflects the reliability of this assessment.
             {"\n\n"}
             This report has an overall confidence of{" "}
             <Text style={{ color: "#f8fafc", fontWeight: "bold" }}>
@@ -189,13 +180,8 @@ export function MethodologyPage({ result }: MethodologyPageProps) {
 
       {/* Link */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Open-source project · MIT License
-        </Text>
-        <Link
-          src="https://github.com/AngelCantugr/ai-scorecard"
-          style={styles.link}
-        >
+        <Text style={styles.footerText}>Open-source project · MIT License</Text>
+        <Link src="https://github.com/AngelCantugr/ai-scorecard" style={styles.link}>
           github.com/AngelCantugr/ai-scorecard
         </Link>
       </View>

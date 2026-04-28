@@ -111,11 +111,7 @@ const styles = StyleSheet.create({
   },
 });
 
-function generateNextStep(
-  dimName: string,
-  percentage: number,
-  unaddressedCount: number,
-): string {
+function generateNextStep(dimName: string, percentage: number, unaddressedCount: number): string {
   if (percentage >= 75) {
     return `${dimName} is performing well. Focus on sustaining gains and sharing practices across teams.`;
   }
@@ -132,12 +128,7 @@ interface GapsPageProps {
   lowConfidence: QuestionScore[];
 }
 
-export function GapsPage({
-  result,
-  questions,
-  unaddressed,
-  lowConfidence,
-}: GapsPageProps) {
+export function GapsPage({ result, questions, unaddressed, lowConfidence }: GapsPageProps) {
   // Build a O(1) lookup from questionId → dimensionId to avoid nested iteration
   const questionToDimension = new Map<string, string>();
   for (const dim of result.dimensions) {
@@ -155,9 +146,7 @@ export function GapsPage({
 
       {/* Unaddressed questions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Unaddressed Questions ({unaddressed.length})
-        </Text>
+        <Text style={styles.sectionTitle}>Unaddressed Questions ({unaddressed.length})</Text>
         {unaddressed.length === 0 && (
           <Text style={styles.emptyNote}>
             No questions scored 0 with confirmed measurement. Great coverage!
@@ -171,7 +160,8 @@ export function GapsPage({
               <View style={styles.gapContent}>
                 <Text style={styles.gapQuestion}>{q?.text ?? qs.questionId}</Text>
                 <Text style={styles.gapAction}>
-                  Recommended: {q?.measurementStrategy ?? "Review and implement the relevant practice."}
+                  Recommended:{" "}
+                  {q?.measurementStrategy ?? "Review and implement the relevant practice."}
                 </Text>
               </View>
             </View>
@@ -191,8 +181,7 @@ export function GapsPage({
         </Text>
         {lowConfidence.length === 0 && (
           <Text style={styles.emptyNote}>
-            All measurements have acceptable confidence. No manual verification
-            required.
+            All measurements have acceptable confidence. No manual verification required.
           </Text>
         )}
         {lowConfidence.slice(0, 6).map((qs) => {
@@ -200,12 +189,8 @@ export function GapsPage({
           return (
             <View key={qs.questionId} style={styles.lowConfItem}>
               <Text style={styles.lowConfId}>{qs.questionId}</Text>
-              <Text style={styles.lowConfText}>
-                {q?.text ?? qs.questionId}
-              </Text>
-              <Text style={styles.lowConfPct}>
-                {Math.round(qs.confidence * 100)}%
-              </Text>
+              <Text style={styles.lowConfText}>{q?.text ?? qs.questionId}</Text>
+              <Text style={styles.lowConfPct}>{Math.round(qs.confidence * 100)}%</Text>
             </View>
           );
         })}
@@ -216,7 +201,7 @@ export function GapsPage({
         <Text style={styles.sectionTitle}>Suggested Next Steps by Dimension</Text>
         {result.dimensions.map((dim) => {
           const dimUnaddressed = unaddressed.filter(
-            (qs) => questionToDimension.get(qs.questionId) === dim.dimensionId,
+            (qs) => questionToDimension.get(qs.questionId) === dim.dimensionId
           ).length;
           return (
             <View key={dim.dimensionId} style={styles.nextStepItem}>

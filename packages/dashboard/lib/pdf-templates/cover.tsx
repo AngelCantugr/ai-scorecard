@@ -143,9 +143,7 @@ export function CoverPage({ result }: CoverPageProps) {
             <Text style={styles.label}>Overall Score</Text>
             <Text style={[styles.scoreBig, { color: tierColor }]}>
               {result.totalScore}
-              <Text style={{ fontSize: 24, color: "#64748b" }}>
-                /{result.maxScore}
-              </Text>
+              <Text style={{ fontSize: 24, color: "#64748b" }}>/{result.maxScore}</Text>
             </Text>
             <Text style={styles.scoreLabel}>{result.percentage}% of maximum</Text>
           </View>

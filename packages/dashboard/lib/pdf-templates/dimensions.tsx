@@ -143,33 +143,22 @@ function DimensionCard({
 
       {/* Bar */}
       <View style={styles.barTrack}>
-        <View
-          style={[
-            styles.barFill,
-            { width: `${dim.percentage}%`, backgroundColor: color },
-          ]}
-        />
+        <View style={[styles.barFill, { width: `${dim.percentage}%`, backgroundColor: color }]} />
       </View>
 
       {/* Questions */}
       {dim.questionScores.map((qs) => {
         const q = questions.find((x) => x.id === qs.questionId);
         const rubricText = q?.rubric[qs.score] ?? "";
-        const evidenceSummaries = qs.evidence
-          .filter((e) => e.summary)
-          .slice(0, 2);
+        const evidenceSummaries = qs.evidence.filter((e) => e.summary).slice(0, 2);
 
         return (
           <View key={qs.questionId}>
             <View style={styles.questionRow}>
               <Text style={styles.qId}>{qs.questionId}</Text>
-              <Text style={[styles.qScore, { color: scoreColor(qs.score) }]}>
-                {qs.score}/2
-              </Text>
+              <Text style={[styles.qScore, { color: scoreColor(qs.score) }]}>{qs.score}/2</Text>
               <Text style={styles.qRubric}>{rubricText}</Text>
-              <Text style={styles.qConf}>
-                {Math.round(qs.confidence * 100)}%
-              </Text>
+              <Text style={styles.qConf}>{Math.round(qs.confidence * 100)}%</Text>
             </View>
             {evidenceSummaries.map((e, i) => (
               <Text key={i} style={styles.evidenceText}>
