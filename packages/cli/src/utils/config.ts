@@ -35,13 +35,23 @@ export function loadConfig(): CliConfig {
   const homeConfig = readConfigFile(join(homedir(), ".ai-scorecard.json"));
   const cwdConfig = readConfigFile(join(process.cwd(), ".ai-scorecard.json"));
 
-  // Strip credential fields from CWD config before merging
+  // Strip credential fields from CWD config before merging.
+  // exactOptionalPropertyTypes: true requires properties to be absent (not set to undefined),
+  // so all optional fields must use conditional spreading.
   const safeCwdConfig: CliConfig = {
-    ...cwdConfig,
-    github: cwdConfig.github
-      ? { org: cwdConfig.github.org, maxRepos: cwdConfig.github.maxRepos }
-      : undefined,
-    ai: cwdConfig.ai ? { provider: cwdConfig.ai.provider, model: cwdConfig.ai.model } : undefined,
+    ...(cwdConfig.output !== undefined && { output: cwdConfig.output }),
+    ...(cwdConfig.github && {
+      github: {
+        ...(cwdConfig.github.org !== undefined && { org: cwdConfig.github.org }),
+        ...(cwdConfig.github.maxRepos !== undefined && { maxRepos: cwdConfig.github.maxRepos }),
+      },
+    }),
+    ...(cwdConfig.ai && {
+      ai: {
+        ...(cwdConfig.ai.provider !== undefined && { provider: cwdConfig.ai.provider }),
+        ...(cwdConfig.ai.model !== undefined && { model: cwdConfig.ai.model }),
+      },
+    }),
   };
 
   return {
