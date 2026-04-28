@@ -136,8 +136,8 @@ export function decodeResults(encoded: string): ScorecardResult {
 
   // Warn on version mismatch but still attempt decode
   if (versionParam !== undefined && versionParam !== SHARE_VERSION) {
-    process.stderr.write(
-      `[ai-scorecard] Share link version mismatch: expected ${SHARE_VERSION}, got ${versionParam}. Attempting decode anyway.\n`
+    console.warn(
+      `[ai-scorecard] Share link version mismatch: expected ${SHARE_VERSION}, got ${versionParam}. Attempting decode anyway.`
     );
   }
 
