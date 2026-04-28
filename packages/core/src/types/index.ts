@@ -1,4 +1,4 @@
-export type { AdapterConfig, Signal, Evidence, SignalResult, Adapter } from './adapter.js';
+export type { AdapterConfig, Signal, Evidence, SignalResult, Adapter } from "./adapter.js";
 export type {
   DimensionId,
   Dimension,
@@ -8,4 +8,4 @@ export type {
   TierLevel,
   Tier,
   ScorecardResult,
-} from './scoring.js';
+} from "./scoring.js";

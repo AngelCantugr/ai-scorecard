@@ -22,31 +22,23 @@ program
 program
   .command("assess")
   .description("Run a full AI adoption assessment")
-  .option(
-    "--github-org <org>",
-    "GitHub organization to assess",
-    config.github?.org,
-  )
+  .option("--github-org <org>", "GitHub organization to assess", config.github?.org)
   .option(
     "--github-token <token>",
     "GitHub personal access token",
-    process.env["GITHUB_TOKEN"] ?? config.github?.token,
+    process.env["GITHUB_TOKEN"] ?? config.github?.token
   )
   .option("--ai-inference", "Enable AI inference analysis (requires Anthropic key)")
   .option(
     "--anthropic-key <key>",
     "Anthropic API key for AI inference",
-    process.env["ANTHROPIC_API_KEY"] ?? config.ai?.apiKey,
+    process.env["ANTHROPIC_API_KEY"] ?? config.ai?.apiKey
   )
-  .option(
-    "--model <model>",
-    "AI model to use for inference",
-    config.ai?.model,
-  )
+  .option("--model <model>", "AI model to use for inference", config.ai?.model)
   .addOption(
     new Option("--output <format>", "Output format: table (default), json, or markdown")
       .choices(["table", "json", "markdown"])
-      .default(config.output ?? "table"),
+      .default(config.output ?? "table")
   )
   .option("--repos <repos>", "Comma-separated list of repo names to assess")
   .option(
@@ -59,7 +51,7 @@ program
       }
       return n;
     },
-    config.github?.maxRepos ?? 50,
+    config.github?.maxRepos ?? 50
   )
   .option("--dry-run", "Show what would be analyzed without making API calls")
   .action(
@@ -88,7 +80,7 @@ program
         console.error(String(err));
         process.exit(1);
       });
-    },
+    }
   );
 
 program.parse();

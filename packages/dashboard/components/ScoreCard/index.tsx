@@ -38,9 +38,7 @@ export function ScoreCard({ result }: ScoreCardProps) {
           </div>
           <div>
             <dt className="text-slate-400">Adapter</dt>
-            <dd className="font-medium text-white">
-              {result.metadata.adapterName}
-            </dd>
+            <dd className="font-medium text-white">{result.metadata.adapterName}</dd>
           </div>
           <div>
             <dt className="text-slate-400">Assessed At</dt>

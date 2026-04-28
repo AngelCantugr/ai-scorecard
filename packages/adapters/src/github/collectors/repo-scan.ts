@@ -103,7 +103,12 @@ export async function collectGatewaySignal(
   const matchedRepos: string[] = [];
 
   for (const repo of repos) {
-    const paths = await fetchRepoFilePaths(octokit, repo.fullName.split("/")[0] ?? "", repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(
+      octokit,
+      repo.fullName.split("/")[0] ?? "",
+      repo.name,
+      repo.defaultBranch
+    );
     const hasGateway = GATEWAY_CONFIG_FILES.some((gf) =>
       paths.some((p) => p === gf || p.endsWith(`/${gf}`))
     );
@@ -124,7 +129,8 @@ export async function collectGatewaySignal(
   ];
 
   let score: 0 | 1 | 2 = 0;
-  if (matchedRepos.length === 1) score = 2; // Single dedicated repo = centralized
+  if (matchedRepos.length === 1)
+    score = 2; // Single dedicated repo = centralized
   else if (matchedRepos.length >= 2) score = 1; // Multiple repos = distributed, partial credit
 
   return {
@@ -198,9 +204,7 @@ export async function collectSteeringFilesSignal(
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
     const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
-    const hasSteeringFile = STEERING_FILES.some((sf) =>
-      paths.some((p) => p === sf)
-    );
+    const hasSteeringFile = STEERING_FILES.some((sf) => paths.some((p) => p === sf));
     if (hasSteeringFile) {
       matchedRepos.push(repo.fullName);
     }
@@ -212,7 +216,8 @@ export async function collectSteeringFilesSignal(
       data: {
         matchedRepos,
         totalRepos: repos.length,
-        coveragePercent: repos.length > 0 ? Math.round((matchedRepos.length / repos.length) * 100) : 0,
+        coveragePercent:
+          repos.length > 0 ? Math.round((matchedRepos.length / repos.length) * 100) : 0,
       },
       summary:
         matchedRepos.length === 0
@@ -319,7 +324,14 @@ export async function collectPromptSecuritySignal(
 ): Promise<SignalResult> {
   const exposedRepos: string[] = [];
   const serverSidePromptRepos: string[] = [];
-  const clientDirPatterns = ["src/client", "src/frontend", "src/app", "public", "static", "frontend"];
+  const clientDirPatterns = [
+    "src/client",
+    "src/frontend",
+    "src/app",
+    "public",
+    "static",
+    "frontend",
+  ];
   const serverPromptDirs = ["prompts", "templates", "prompt-templates", "llm-prompts"];
 
   for (const repo of repos) {
@@ -510,9 +522,7 @@ export async function collectSpecAccuracySignal(
     const owner = repo.fullName.split("/")[0] ?? "";
     const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
 
-    const hasSpec = OPENAPI_FILES.some((of) =>
-      paths.some((p) => p === of || p.endsWith(`/${of}`))
-    );
+    const hasSpec = OPENAPI_FILES.some((of) => paths.some((p) => p === of || p.endsWith(`/${of}`)));
     if (!hasSpec) continue;
     specsFound.push(repo.fullName);
 

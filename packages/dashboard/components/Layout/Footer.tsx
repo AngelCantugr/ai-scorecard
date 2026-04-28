@@ -18,10 +18,7 @@ export function Footer() {
               </a>
             </li>
             <li>
-              <a
-                href="/assess"
-                className="transition-colors hover:text-white"
-              >
+              <a href="/assess" className="transition-colors hover:text-white">
                 Start Assessment
               </a>
             </li>

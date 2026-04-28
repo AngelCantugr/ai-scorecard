@@ -8,11 +8,7 @@ export const metadata: Metadata = {
   description: "Automated AI adoption scorecard for engineering leaders",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col bg-slate-900 text-white antialiased">

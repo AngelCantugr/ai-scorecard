@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dimensions } from '../src/dimensions.ts';
-import { questions } from '../src/questions.ts';
-import { tiers } from '../src/tiers.ts';
+import { dimensions } from '../dist/dimensions.js';
+import { questions } from '../dist/questions.js';
+import { tiers } from '../dist/tiers.js';
 
 const questionMaxScore = (question) =>
   Math.max(...Object.keys(question.rubric).map((score) => Number(score)));
