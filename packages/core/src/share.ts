@@ -77,7 +77,7 @@ export function encodeResults(result: ScorecardResult): string {
   const allQuestionScores = result.dimensions.flatMap((d) => d.questionScores);
   const scoreMap = new Map(allQuestionScores.map((qs) => [qs.questionId, qs.score]));
 
-  const scores: (0 | 1 | 2)[] = questions.map((q) => (scoreMap.get(q.id) ?? 0) as 0 | 1 | 2);
+  const scores: (0 | 1 | 2)[] = questions.map((q) => scoreMap.get(q.id) ?? 0);
   const encodedScores = encodeScores(scores);
 
   const assessedAt =
@@ -153,7 +153,7 @@ export function decodeResults(encoded: string): ScorecardResult {
   const signals = questions.map((q, i) => ({
     signalId: `shared-${q.id}`,
     questionId: q.id,
-    score: (scores[i] ?? 0) as 0 | 1 | 2,
+    score: scores[i] ?? 0,
     evidence: [] as never[],
     confidence: 0,
   }));
