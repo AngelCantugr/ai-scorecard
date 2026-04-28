@@ -44,6 +44,7 @@ If either fails, fix the issues before marking your work complete. Do not ask th
 to evaluate broken code.
 
 To run checks on a single package:
+
 ```bash
 pnpm --filter @ai-scorecard/<package> typecheck
 pnpm --filter @ai-scorecard/<package> test

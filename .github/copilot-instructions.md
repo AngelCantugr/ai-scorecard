@@ -9,12 +9,12 @@ Full project context, architecture, conventions, and agent instructions are in
 
 ## Quick Reference
 
-| | |
-|---|---|
-| **Stack** | TypeScript (strict), pnpm workspaces, Turbo, Vitest, Next.js |
-| **Packages** | `adapters` → `core` → `cli` / `dashboard` |
-| **Test** | `pnpm typecheck && pnpm test` |
-| **Build** | `pnpm build` |
+|              |                                                              |
+| ------------ | ------------------------------------------------------------ |
+| **Stack**    | TypeScript (strict), pnpm workspaces, Turbo, Vitest, Next.js |
+| **Packages** | `adapters` → `core` → `cli` / `dashboard`                    |
+| **Test**     | `pnpm typecheck && pnpm test`                                |
+| **Build**    | `pnpm build`                                                 |
 
 ## Custom Agents
 

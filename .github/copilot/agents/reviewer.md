@@ -31,13 +31,13 @@ Evaluate the implementation on these dimensions:
 
 ## Scoring Guide
 
-| Score | Meaning |
-|-------|---------|
-| 9–10 | Excellent. Problem fully solved, clean implementation, no meaningful issues. |
-| 8 | Good. Problem solved. Minor non-blocking suggestions only. **APPROVED threshold.** |
-| 6–7 | Acceptable attempt but has 1–2 issues that should be fixed before merging. |
-| 4–5 | Partial. Core logic works but misses important edge cases or has architectural issues. |
-| 1–3 | Significant rework needed. Problem not adequately addressed. |
+| Score | Meaning                                                                                |
+| ----- | -------------------------------------------------------------------------------------- |
+| 9–10  | Excellent. Problem fully solved, clean implementation, no meaningful issues.           |
+| 8     | Good. Problem solved. Minor non-blocking suggestions only. **APPROVED threshold.**     |
+| 6–7   | Acceptable attempt but has 1–2 issues that should be fixed before merging.             |
+| 4–5   | Partial. Core logic works but misses important edge cases or has architectural issues. |
+| 1–3   | Significant rework needed. Problem not adequately addressed.                           |
 
 **Score ≥ 8 = APPROVED** (dev-loop exits early).
 **Score < 8 = NEEDS_REVISION** (dev-loop continues to next iteration).

@@ -47,14 +47,14 @@ ai-scorecard/
 
 ## Stack & Tooling
 
-| Concern | Tool |
-|---------|------|
-| Language | TypeScript (strict mode) |
-| Package manager | pnpm v10 with workspaces |
-| Build orchestration | Turbo |
-| Testing | Vitest |
-| Linting | ESLint |
-| Formatting | Prettier |
+| Concern             | Tool                              |
+| ------------------- | --------------------------------- |
+| Language            | TypeScript (strict mode)          |
+| Package manager     | pnpm v10 with workspaces          |
+| Build orchestration | Turbo                             |
+| Testing             | Vitest                            |
+| Linting             | ESLint                            |
+| Formatting          | Prettier                          |
 | Dashboard framework | Next.js (in `packages/dashboard`) |
 
 ---
@@ -73,6 +73,7 @@ pnpm format         # Prettier format all files
 ```
 
 To run in a single package:
+
 ```bash
 pnpm --filter @ai-scorecard/core test
 pnpm --filter @ai-scorecard/dashboard dev
@@ -93,23 +94,27 @@ pnpm --filter @ai-scorecard/dashboard dev
 ## Code Conventions
 
 ### TypeScript
+
 - Strict mode is on — no `any`, no implicit returns, explicit return types on public APIs
 - Prefer `type` over `interface` for data shapes; use `interface` only when extension is
   intended
 - Use `zod` for runtime validation at system boundaries (external API responses, CLI input)
 
 ### Comments
+
 - Only comment WHY, never WHAT — well-named identifiers explain themselves
 - Always document: public API signatures, non-obvious algorithmic decisions,
   security-sensitive logic
 - Never: narrate obvious flow, describe what the function name already says
 
 ### Error Handling
+
 - Errors at system boundaries (adapters, CLI input) must be caught and returned as typed
   `Result<T, E>` or surfaced to the user with actionable messages
 - Never swallow errors silently; never log raw stack traces to end users
 
 ### Security
+
 - No hardcoded secrets or API keys — use environment variables
 - Validate all external data with zod schemas before use
 - GitHub tokens must be scoped to minimum required permissions

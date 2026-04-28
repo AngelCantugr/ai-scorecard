@@ -20,6 +20,7 @@ Execute this loop exactly for every task you receive:
 ### Phase 0 — Parse the Task
 
 Extract from the input:
+
 - **Problem statement** — the actual problem to solve (not just the requested action)
 - **Acceptance criteria** — explicit requirements if any
 - **Scope hints** — file paths, packages, or areas mentioned
