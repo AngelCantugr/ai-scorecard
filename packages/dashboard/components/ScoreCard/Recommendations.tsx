@@ -1,8 +1,5 @@
 import type { ScorecardResult } from "@ai-scorecard/core";
-import {
-  getWeakestDimensions,
-  getLowConfidenceQuestions,
-} from "@ai-scorecard/core";
+import { getWeakestDimensions, getLowConfidenceQuestions } from "@ai-scorecard/core";
 import { Card } from "@/components/ui/Card";
 
 interface RecommendationsProps {
@@ -62,10 +59,7 @@ export function Recommendations({ result }: RecommendationsProps) {
       }
       if (part.startsWith("`") && part.endsWith("`")) {
         return (
-          <code
-            key={i}
-            className="rounded bg-slate-700 px-1 text-xs text-slate-200"
-          >
+          <code key={i} className="rounded bg-slate-700 px-1 text-xs text-slate-200">
             {part.slice(1, -1)}
           </code>
         );
@@ -76,10 +70,7 @@ export function Recommendations({ result }: RecommendationsProps) {
 
   return (
     <Card>
-      <h2
-        className="mb-4 text-lg font-semibold text-white"
-        aria-label="Recommendations"
-      >
+      <h2 className="mb-4 text-lg font-semibold text-white" aria-label="Recommendations">
         <span aria-hidden="true">💡</span> Recommendations
       </h2>
       {recommendations.length === 0 ? (

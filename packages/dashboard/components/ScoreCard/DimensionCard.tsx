@@ -29,14 +29,10 @@ export function DimensionCard({ dimension, questions }: DimensionCardProps) {
           <p className="text-sm font-semibold text-white">{dimension.name}</p>
           <p className="mt-0.5 text-2xl font-bold text-white">
             {dimension.score}
-            <span className="text-sm font-normal text-slate-400">
-              /{dimension.maxScore}
-            </span>
+            <span className="text-sm font-normal text-slate-400">/{dimension.maxScore}</span>
           </p>
         </div>
-        <span className="text-lg font-semibold text-slate-300">
-          {dimension.percentage}%
-        </span>
+        <span className="text-lg font-semibold text-slate-300">{dimension.percentage}%</span>
       </div>
 
       {/* Progress bar */}
@@ -49,9 +45,7 @@ export function DimensionCard({ dimension, questions }: DimensionCardProps) {
         aria-label={`${dimension.name}: ${dimension.percentage}%`}
       >
         <div
-          className={["h-full rounded-full transition-all", progressColor].join(
-            " ",
-          )}
+          className={["h-full rounded-full transition-all", progressColor].join(" ")}
           style={{ width: `${dimension.percentage}%` }}
         />
       </div>
@@ -76,13 +70,7 @@ export function DimensionCard({ dimension, questions }: DimensionCardProps) {
           {dimension.questionScores.map((qs) => {
             const question = questionMap.get(qs.questionId);
             if (!question) return null;
-            return (
-              <QuestionRow
-                key={qs.questionId}
-                question={question}
-                questionScore={qs}
-              />
-            );
+            return <QuestionRow key={qs.questionId} question={question} questionScore={qs} />;
           })}
         </div>
       )}

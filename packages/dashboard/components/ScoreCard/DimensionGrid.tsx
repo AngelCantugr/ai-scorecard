@@ -16,9 +16,7 @@ export function DimensionGrid({ result, questions }: DimensionGridProps) {
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold text-white">
-        Dimension Breakdown
-      </h2>
+      <h2 className="mb-3 text-lg font-semibold text-white">Dimension Breakdown</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {result.dimensions.map((dim) => (
           <DimensionCard
