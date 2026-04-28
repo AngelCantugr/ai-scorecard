@@ -41,26 +41,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     body = (await req.json()) as AssessRequestBody;
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON in request body." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON in request body." }, { status: 400 });
   }
 
   const { org, token, repos, enableAI, anthropicKey, maxRepos } = body;
 
   if (!org || typeof org !== "string" || org.trim() === "") {
-    return NextResponse.json(
-      { error: "Missing required field: org" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing required field: org" }, { status: 400 });
   }
 
   if (!token || typeof token !== "string" || token.trim() === "") {
-    return NextResponse.json(
-      { error: "Missing required field: token" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing required field: token" }, { status: 400 });
   }
 
   if (repos !== undefined && !Array.isArray(repos)) {
@@ -70,10 +61,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  if (
-    repos !== undefined &&
-    !repos.every((r) => typeof r === "string" && r.trim() !== "")
-  ) {
+  if (repos !== undefined && !repos.every((r) => typeof r === "string" && r.trim() !== "")) {
     return NextResponse.json(
       { error: "Each entry in 'repos' must be a non-empty string." },
       { status: 400 }
@@ -89,10 +77,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const rawMaxRepos = Number(maxRepos ?? 50);
   if (!Number.isFinite(rawMaxRepos) || !Number.isInteger(rawMaxRepos)) {
-    return NextResponse.json(
-      { error: "Field 'maxRepos' must be an integer." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Field 'maxRepos' must be an integer." }, { status: 400 });
   }
   const clampedMaxRepos = Math.max(1, Math.min(500, rawMaxRepos));
 
@@ -122,10 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Assessment failed.";
     const isTimeout = message.includes("timed out");
-    return NextResponse.json(
-      { error: message },
-      { status: isTimeout ? 504 : 500 }
-    );
+    return NextResponse.json({ error: message }, { status: isTimeout ? 504 : 500 });
   }
 }
 
@@ -256,15 +238,10 @@ async function buildContentBundle(
         );
         if (res.ok) {
           const data = (await res.json()) as GitHubFileContent;
-          if (
-            data.type === "file" &&
-            data.content &&
-            data.encoding === "base64"
-          ) {
-            const content = Buffer.from(
-              data.content.replace(/\n/g, ""),
-              "base64"
-            ).toString("utf-8");
+          if (data.type === "file" && data.content && data.encoding === "base64") {
+            const content = Buffer.from(data.content.replace(/\n/g, ""), "base64").toString(
+              "utf-8"
+            );
             files.push({ path: `${repoName}/${filePath}`, content });
           }
         }

@@ -1,8 +1,4 @@
-import type {
-  DimensionScore,
-  QuestionScore,
-  ScorecardResult,
-} from "./types/index.js";
+import type { DimensionScore, QuestionScore, ScorecardResult } from "./types/index.js";
 
 /**
  * Returns dimensions sorted by score (ascending) — i.e., weakest areas first.
@@ -28,7 +24,7 @@ export function getUnaddressedQuestions(result: ScorecardResult): QuestionScore[
  */
 export function getLowConfidenceQuestions(
   result: ScorecardResult,
-  threshold = 0.5,
+  threshold = 0.5
 ): QuestionScore[] {
   return result.dimensions
     .flatMap((d) => d.questionScores)

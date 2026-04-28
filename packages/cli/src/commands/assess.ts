@@ -44,9 +44,7 @@ function dryRun(options: AssessOptions): void {
   }
   console.log(`  Output format: ${options.output ?? "table"}`);
   console.log(
-    chalk.gray(
-      "\nNo API calls will be made. Remove --dry-run to run the full assessment.",
-    ),
+    chalk.gray("\nNo API calls will be made. Remove --dry-run to run the full assessment.")
   );
 }
 
@@ -71,19 +69,11 @@ export async function runAssess(options: AssessOptions): Promise<void> {
     process.exit(1);
   }
   if (!options.githubToken) {
-    console.error(
-      chalk.red(
-        "Error: --github-token is required (or set GITHUB_TOKEN env var).",
-      ),
-    );
+    console.error(chalk.red("Error: --github-token is required (or set GITHUB_TOKEN env var)."));
     process.exit(1);
   }
   if (options.aiInference && !options.anthropicKey) {
-    console.error(
-      chalk.red(
-        "Error: --anthropic-key is required when --ai-inference is enabled.",
-      ),
-    );
+    console.error(chalk.red("Error: --anthropic-key is required when --ai-inference is enabled."));
     process.exit(1);
   }
 
@@ -100,7 +90,10 @@ export async function runAssess(options: AssessOptions): Promise<void> {
       token: options.githubToken,
       org,
       repos: options.repos
-        ? options.repos.split(",").map((r) => r.trim()).filter(Boolean)
+        ? options.repos
+            .split(",")
+            .map((r) => r.trim())
+            .filter(Boolean)
         : undefined,
       maxRepos: options.maxRepos ?? 50,
     });
@@ -143,11 +136,8 @@ export async function runAssess(options: AssessOptions): Promise<void> {
           .flatMap((s) =>
             s.evidence.map((e) => ({
               path: `${s.signalId}`,
-              content:
-                typeof e.data === "string"
-                  ? e.data
-                  : JSON.stringify(e.data),
-            })),
+              content: typeof e.data === "string" ? e.data : JSON.stringify(e.data),
+            }))
           )
           .slice(0, 50), // Keep token usage reasonable
         metadata: { org },

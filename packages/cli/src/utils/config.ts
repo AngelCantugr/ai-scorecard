@@ -41,9 +41,7 @@ export function loadConfig(): CliConfig {
     github: cwdConfig.github
       ? { org: cwdConfig.github.org, maxRepos: cwdConfig.github.maxRepos }
       : undefined,
-    ai: cwdConfig.ai
-      ? { provider: cwdConfig.ai.provider, model: cwdConfig.ai.model }
-      : undefined,
+    ai: cwdConfig.ai ? { provider: cwdConfig.ai.provider, model: cwdConfig.ai.model } : undefined,
   };
 
   return {

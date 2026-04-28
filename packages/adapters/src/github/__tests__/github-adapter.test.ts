@@ -133,9 +133,7 @@ describe("GitHubAdapter", () => {
       octokit = makeOctokit();
       // Provide a list of repos
       (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
-        data: [
-          { name: "test-repo", full_name: "test-org/test-repo", default_branch: "main" },
-        ],
+        data: [{ name: "test-repo", full_name: "test-org/test-repo", default_branch: "main" }],
       });
     });
 
@@ -288,7 +286,9 @@ describe("GitHubAdapter", () => {
           if (path === ".github/workflows/validate-spec.yml") {
             return Promise.resolve({
               data: {
-                content: Buffer.from("steps:\n  - run: npx @redocly/openapi-cli lint openapi.yaml").toString("base64"),
+                content: Buffer.from(
+                  "steps:\n  - run: npx @redocly/openapi-cli lint openapi.yaml"
+                ).toString("base64"),
                 encoding: "base64",
               },
             });
@@ -310,7 +310,9 @@ describe("GitHubAdapter", () => {
     it("scores Q6 as 0 when .env is committed to a repo", async () => {
       const octokit = makeOctokit();
       (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
-        data: [{ name: "insecure-repo", full_name: "test-org/insecure-repo", default_branch: "main" }],
+        data: [
+          { name: "insecure-repo", full_name: "test-org/insecure-repo", default_branch: "main" },
+        ],
       });
       // .env found
       (octokit.repos as Record<string, Mock>)["getContent"] = vi.fn().mockResolvedValue({
@@ -330,7 +332,9 @@ describe("GitHubAdapter", () => {
         data: [{ name: "ok-repo", full_name: "test-org/ok-repo", default_branch: "main" }],
       });
       // .env not found, no secrets manager files
-      (octokit.repos as Record<string, Mock>)["getContent"] = vi.fn().mockRejectedValue({ status: 404 });
+      (octokit.repos as Record<string, Mock>)["getContent"] = vi
+        .fn()
+        .mockRejectedValue({ status: 404 });
       (octokit.git as Record<string, Mock>)["getTree"] = vi.fn().mockResolvedValue({
         data: {
           tree: [{ type: "blob", path: "src/index.ts" }],
@@ -365,8 +369,12 @@ describe("GitHubAdapter", () => {
       }));
 
       (octokit.pulls as Record<string, Mock>)["list"] = vi.fn().mockResolvedValue({ data: prs });
-      (octokit.pulls as Record<string, Mock>)["listReviews"] = vi.fn().mockResolvedValue({ data: [] });
-      (octokit.pulls as Record<string, Mock>)["listCommits"] = vi.fn().mockResolvedValue({ data: [] });
+      (octokit.pulls as Record<string, Mock>)["listReviews"] = vi
+        .fn()
+        .mockResolvedValue({ data: [] });
+      (octokit.pulls as Record<string, Mock>)["listCommits"] = vi
+        .fn()
+        .mockResolvedValue({ data: [] });
 
       const adapter = await createConnectedAdapter(octokit);
       const results = await adapter.collect();
@@ -450,11 +458,15 @@ describe("GitHubAdapter", () => {
         updated_at: new Date(now - 86400000).toISOString(),
       };
 
-      (octokit.pulls as Record<string, Mock>)["list"] = vi.fn().mockResolvedValue({ data: [mergedPR] });
+      (octokit.pulls as Record<string, Mock>)["list"] = vi
+        .fn()
+        .mockResolvedValue({ data: [mergedPR] });
       (octokit.pulls as Record<string, Mock>)["listFiles"] = vi.fn().mockResolvedValue({
         data: [{ filename: "CLAUDE.md" }, { filename: "src/index.ts" }],
       });
-      (octokit.repos as Record<string, Mock>)["listCommits"] = vi.fn().mockResolvedValue({ data: [] });
+      (octokit.repos as Record<string, Mock>)["listCommits"] = vi
+        .fn()
+        .mockResolvedValue({ data: [] });
 
       const adapter = await createConnectedAdapter(octokit);
       const results = await adapter.collect();
@@ -462,7 +474,9 @@ describe("GitHubAdapter", () => {
 
       expect(q20).toBeDefined();
       expect(q20?.score).toBe(2); // 2 repos both have reviewed AI config PRs
-      expect(q20?.evidence[0]?.data).toMatchObject({ reviewedRepos: expect.arrayContaining(["test-org/repo-a", "test-org/repo-b"]) });
+      expect(q20?.evidence[0]?.data).toMatchObject({
+        reviewedRepos: expect.arrayContaining(["test-org/repo-a", "test-org/repo-b"]),
+      });
     });
 
     it("scores 1 when only unreviewed direct commits touch AI config files", async () => {
@@ -548,9 +562,9 @@ describe("GitHubAdapter", () => {
         data: [{ name: "test-repo", full_name: "test-org/test-repo", default_branch: "main" }],
       });
       // Make git.getTree throw an unrecoverable error — will affect multiple repo-scan collectors
-      (octokit.git as Record<string, Mock>)["getTree"] = vi.fn().mockRejectedValue(
-        new Error("unexpected API error")
-      );
+      (octokit.git as Record<string, Mock>)["getTree"] = vi
+        .fn()
+        .mockRejectedValue(new Error("unexpected API error"));
 
       const adapter = await createConnectedAdapter(octokit);
       const results = await adapter.collect();

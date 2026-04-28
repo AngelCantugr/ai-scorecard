@@ -59,9 +59,7 @@ export async function collectSecretsManagementSignal(
         tree_sha: repo.defaultBranch,
         recursive: "1",
       });
-      const paths = tree.tree
-        .filter((item) => item.type === "blob")
-        .map((item) => item.path ?? "");
+      const paths = tree.tree.filter((item) => item.type === "blob").map((item) => item.path ?? "");
 
       const hasSecretsManager = SECRETS_MANAGER_FILES.some((smf) =>
         paths.some((p) => p === smf || p.endsWith(`/${smf}`))
@@ -74,7 +72,10 @@ export async function collectSecretsManagementSignal(
       const sampleFiles = paths
         .filter(
           (p) =>
-            (p.endsWith(".ts") || p.endsWith(".js") || p.endsWith(".py") || p.endsWith(".env.example")) &&
+            (p.endsWith(".ts") ||
+              p.endsWith(".js") ||
+              p.endsWith(".py") ||
+              p.endsWith(".env.example")) &&
             !p.includes("node_modules") &&
             !p.includes("dist")
         )
