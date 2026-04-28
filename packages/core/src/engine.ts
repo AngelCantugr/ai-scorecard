@@ -18,7 +18,7 @@ import type {
 export function computeScorecard(
   signals: SignalResult[],
   metadata: { adapterName: string; target: string },
-  assessedAt: Date = new Date(),
+  assessedAt: Date = new Date()
 ): ScorecardResult {
   // 1. Deduplicate signals — keep highest confidence; break ties with higher score
   const dedupedSignals = new Map<string, SignalResult>();
@@ -35,27 +35,21 @@ export function computeScorecard(
 
   // 2. Build per-dimension scores
   const dimensionScores: DimensionScore[] = dimensions.map((dimension) => {
-    const dimensionQuestions = questions.filter(
-      (q) => q.dimensionId === dimension.id,
-    );
+    const dimensionQuestions = questions.filter((q) => q.dimensionId === dimension.id);
 
-    const questionScores: QuestionScore[] = dimensionQuestions.map(
-      (question) => {
-        const signal = dedupedSignals.get(question.id);
-        return {
-          questionId: question.id,
-          score: signal ? signal.score : 0,
-          confidence: signal ? signal.confidence : 0,
-          evidence: signal ? signal.evidence : [],
-        };
-      },
-    );
+    const questionScores: QuestionScore[] = dimensionQuestions.map((question) => {
+      const signal = dedupedSignals.get(question.id);
+      return {
+        questionId: question.id,
+        score: signal ? signal.score : 0,
+        confidence: signal ? signal.confidence : 0,
+        evidence: signal ? signal.evidence : [],
+      };
+    });
 
     const score = questionScores.reduce((sum, qs) => sum + qs.score, 0);
     const percentage =
-      dimension.maxScore === 0
-        ? 0
-        : Math.round((score / dimension.maxScore) * 100);
+      dimension.maxScore === 0 ? 0 : Math.round((score / dimension.maxScore) * 100);
 
     return {
       dimensionId: dimension.id,
@@ -70,16 +64,13 @@ export function computeScorecard(
   // 3. Compute overall score
   const totalScore = dimensionScores.reduce((sum, ds) => sum + ds.score, 0);
   const maxScore = dimensionScores.reduce((sum, ds) => sum + ds.maxScore, 0);
-  const percentage =
-    maxScore === 0 ? 0 : Math.round((totalScore / maxScore) * 100);
+  const percentage = maxScore === 0 ? 0 : Math.round((totalScore / maxScore) * 100);
 
   // 4. Determine tier
-  const tier = tiers.find(
-    (t) => totalScore >= t.minScore && totalScore <= t.maxScore,
-  );
+  const tier = tiers.find((t) => totalScore >= t.minScore && totalScore <= t.maxScore);
   if (tier === undefined) {
     throw new Error(
-      `No tier found for score ${totalScore} (valid range: ${tiers[0]?.minScore}–${tiers.at(-1)?.maxScore})`,
+      `No tier found for score ${totalScore} (valid range: ${tiers[0]?.minScore}–${tiers.at(-1)?.maxScore})`
     );
   }
 

@@ -11,9 +11,7 @@ export function Header() {
           <span className="text-2xl" aria-hidden="true">
             🤖
           </span>
-          <span className="text-lg font-semibold tracking-tight">
-            AI Scorecard
-          </span>
+          <span className="text-lg font-semibold tracking-tight">AI Scorecard</span>
         </Link>
 
         <nav aria-label="Main navigation">

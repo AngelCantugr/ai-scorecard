@@ -38,9 +38,8 @@ const ANALYSIS_QUESTION_MAP: Record<string, string[]> = {
 };
 
 /** All question IDs handled by the AI inference engine */
-export const AI_INFERENCE_QUESTION_IDS: ReadonlyArray<string> = Object.values(
-  ANALYSIS_QUESTION_MAP
-).flat();
+export const AI_INFERENCE_QUESTION_IDS: ReadonlyArray<string> =
+  Object.values(ANALYSIS_QUESTION_MAP).flat();
 
 /**
  * AI Inference Engine — uses an LLM to analyze repository content and produce
@@ -53,9 +52,7 @@ export class AIInferenceEngine {
   constructor(config: AIInferenceConfig) {
     this.config = config;
     // Only instantiate the client when not in dry-run mode
-    this.client = config.dryRun
-      ? null
-      : new Anthropic({ apiKey: config.apiKey });
+    this.client = config.dryRun ? null : new Anthropic({ apiKey: config.apiKey });
   }
 
   /**
@@ -73,24 +70,9 @@ export class AIInferenceEngine {
 
     const batches = await Promise.all([
       this.runBatch("policy", buildPolicyAnalysisPrompt(bundle), model, maxTokens),
-      this.runBatch(
-        "architecture",
-        buildArchitectureAnalysisPrompt(bundle),
-        model,
-        maxTokens
-      ),
-      this.runBatch(
-        "documentation",
-        buildDocumentationAnalysisPrompt(bundle),
-        model,
-        maxTokens
-      ),
-      this.runBatch(
-        "governance",
-        buildGovernanceAnalysisPrompt(bundle),
-        model,
-        maxTokens
-      ),
+      this.runBatch("architecture", buildArchitectureAnalysisPrompt(bundle), model, maxTokens),
+      this.runBatch("documentation", buildDocumentationAnalysisPrompt(bundle), model, maxTokens),
+      this.runBatch("governance", buildGovernanceAnalysisPrompt(bundle), model, maxTokens),
     ]);
 
     const signalResults: SignalResult[] = [];
@@ -168,9 +150,7 @@ export class AIInferenceEngine {
     }
 
     if (!Array.isArray(parsed)) {
-      console.error(
-        `[ai-inference] Expected JSON array for ${analysisType}, got ${typeof parsed}`
-      );
+      console.error(`[ai-inference] Expected JSON array for ${analysisType}, got ${typeof parsed}`);
       return { results: this.fallbackResults(analysisType), error: true };
     }
 
@@ -282,8 +262,8 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
     typeof v["questionId"] === "string" &&
     (v["score"] === 0 || v["score"] === 1 || v["score"] === 2) &&
     typeof v["confidence"] === "number" &&
-    (v["confidence"] as number) >= 0 &&
-    (v["confidence"] as number) <= 1 &&
+    v["confidence"] >= 0 &&
+    v["confidence"] <= 1 &&
     typeof v["reasoning"] === "string" &&
     typeof v["evidence_summary"] === "string"
   );
@@ -301,14 +281,14 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
  */
 function extractJsonArray(text: string): unknown[] | null {
   let searchFrom = 0;
-  while (true) {
+  for (;;) {
     const start = text.indexOf("[", searchFrom);
     if (start === -1) return null;
     const end = text.lastIndexOf("]");
     if (end === -1 || end < start) return null;
     try {
-      const parsed = JSON.parse(text.slice(start, end + 1));
-      if (Array.isArray(parsed)) return parsed;
+      const parsed: unknown = JSON.parse(text.slice(start, end + 1));
+      if (Array.isArray(parsed)) return parsed as unknown[];
     } catch {
       // This '[' wasn't the start of the target array — advance and try the next one.
     }

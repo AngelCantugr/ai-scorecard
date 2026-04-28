@@ -46,19 +46,11 @@ export function outputMarkdown(result: ScorecardResult): void {
   // Summary
   lines.push("## Summary");
   lines.push("");
-  lines.push(
-    `| Metric | Value |`,
-  );
+  lines.push(`| Metric | Value |`);
   lines.push(`| --- | --- |`);
-  lines.push(
-    `| Overall Score | ${result.totalScore}/${result.maxScore} (${result.percentage}%) |`,
-  );
-  lines.push(
-    `| Maturity Tier | ${result.tier.label} (Level ${result.tier.level}) |`,
-  );
-  lines.push(
-    `| Overall Confidence | ${Math.round(result.overallConfidence * 100)}% |`,
-  );
+  lines.push(`| Overall Score | ${result.totalScore}/${result.maxScore} (${result.percentage}%) |`);
+  lines.push(`| Maturity Tier | ${result.tier.label} (Level ${result.tier.level}) |`);
+  lines.push(`| Overall Confidence | ${Math.round(result.overallConfidence * 100)}% |`);
   lines.push("");
 
   // Dimension Breakdown
@@ -69,7 +61,7 @@ export function outputMarkdown(result: ScorecardResult): void {
   for (const dim of result.dimensions) {
     const bar = markdownBar(dim.percentage);
     lines.push(
-      `| ${dim.name} | ${dim.score} | ${dim.maxScore} | ${dim.percentage}% | \`${bar}\` |`,
+      `| ${dim.name} | ${dim.score} | ${dim.maxScore} | ${dim.percentage}% | \`${bar}\` |`
     );
   }
   lines.push("");

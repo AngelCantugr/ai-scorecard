@@ -30,7 +30,7 @@ export type {
   TierLevel,
   Tier,
   ScorecardResult,
-} from './types/index.js';
+} from "./types/index.js";
 export { dimensions } from "./dimensions.js";
 export { questions } from "./questions.js";
 export { tiers } from "./tiers.js";

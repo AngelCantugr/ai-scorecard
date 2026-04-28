@@ -143,11 +143,7 @@ function isRateLimitError(err: unknown): boolean {
  * Wrap an async operation with exponential backoff on rate limit errors (429 or
  * rate-limit 403). Auth/permission 403s are NOT retried — they fail immediately.
  */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxAttempts = 3,
-  baseDelayMs = 1000
-): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelayMs = 1000): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -176,12 +172,13 @@ export class GitHubAdapter implements Adapter {
   private octokit: Octokit | null = null;
   private config: GitHubAdapterConfig | null = null;
 
-  async connect(config: AdapterConfig): Promise<void> {
+  connect(config: AdapterConfig): Promise<void> {
     const ghConfig = config as GitHubAdapterConfig;
     this.config = ghConfig;
     this.octokit = new Octokit({
       auth: ghConfig.token,
     });
+    return Promise.resolve();
   }
 
   async collect(): Promise<SignalResult[]> {
@@ -214,22 +211,70 @@ export class GitHubAdapter implements Adapter {
     // Each entry pairs a signal with its collector so a failed collector can emit
     // a zero-score fallback, keeping the output array length equal to this.signals.length.
     const collectorPairs: Array<{ signal: Signal; run: () => Promise<SignalResult> }> = [
-      { signal: GITHUB_SIGNALS[0]!, run: () => withRetry(() => collectGatewaySignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[1]!, run: () => withRetry(() => collectSecretsManagementSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[2]!, run: () => withRetry(() => collectPromptManagementSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[3]!, run: () => withRetry(() => collectSteeringFilesSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[4]!, run: () => withRetry(() => collectAIRulesSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[5]!, run: () => withRetry(() => collectAgentTaskPercentSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[6]!, run: () => withRetry(() => collectPipelineScalingSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[7]!, run: () => withRetry(() => collectAICodeReviewSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[8]!, run: () => withRetry(() => collectTestQualitySignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[9]!, run: () => withRetry(() => collectPRCycleTimeSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[10]!, run: () => withRetry(() => collectAIArtifactSDLCSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[11]!, run: () => withRetry(() => collectPromptSecuritySignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[12]!, run: () => withRetry(() => collectAIAttributionSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[13]!, run: () => withRetry(() => collectTracingSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[14]!, run: () => withRetry(() => collectDocumentationSignal(octokit, repos)) },
-      { signal: GITHUB_SIGNALS[15]!, run: () => withRetry(() => collectSpecAccuracySignal(octokit, repos)) },
+      {
+        signal: GITHUB_SIGNALS[0]!,
+        run: () => withRetry(() => collectGatewaySignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[1]!,
+        run: () => withRetry(() => collectSecretsManagementSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[2]!,
+        run: () => withRetry(() => collectPromptManagementSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[3]!,
+        run: () => withRetry(() => collectSteeringFilesSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[4]!,
+        run: () => withRetry(() => collectAIRulesSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[5]!,
+        run: () => withRetry(() => collectAgentTaskPercentSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[6]!,
+        run: () => withRetry(() => collectPipelineScalingSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[7]!,
+        run: () => withRetry(() => collectAICodeReviewSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[8]!,
+        run: () => withRetry(() => collectTestQualitySignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[9]!,
+        run: () => withRetry(() => collectPRCycleTimeSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[10]!,
+        run: () => withRetry(() => collectAIArtifactSDLCSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[11]!,
+        run: () => withRetry(() => collectPromptSecuritySignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[12]!,
+        run: () => withRetry(() => collectAIAttributionSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[13]!,
+        run: () => withRetry(() => collectTracingSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[14]!,
+        run: () => withRetry(() => collectDocumentationSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[15]!,
+        run: () => withRetry(() => collectSpecAccuracySignal(octokit, repos)),
+      },
     ];
 
     for (const { signal, run } of collectorPairs) {

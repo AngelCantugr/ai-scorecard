@@ -49,9 +49,7 @@ export default function AssessPage() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -105,8 +103,7 @@ export default function AssessPage() {
       sessionStorage.setItem("scorecard_result", JSON.stringify(result));
       router.push("/results");
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "An unexpected error occurred.";
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
       setServerError(msg);
     } finally {
       setLoading(false);
@@ -118,13 +115,18 @@ export default function AssessPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Configure Assessment</h1>
         <p className="mt-2 text-slate-400">
-          Enter your GitHub organisation details to run an AI maturity
-          assessment.
+          Enter your GitHub organisation details to run an AI maturity assessment.
         </p>
       </div>
 
       <Card>
-        <form onSubmit={(e) => { void handleSubmit(e); }} noValidate className="flex flex-col gap-6">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          noValidate
+          className="flex flex-col gap-6"
+        >
           {/* GitHub Organisation */}
           <Input
             label="GitHub Organisation"

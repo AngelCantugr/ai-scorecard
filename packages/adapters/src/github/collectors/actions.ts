@@ -66,8 +66,7 @@ export async function collectPipelineScalingSignal(
         failedRuns++;
       }
       if (run.runStartedAt !== null && run.conclusion !== null) {
-        const durationSec =
-          (run.updatedAt.getTime() - run.runStartedAt.getTime()) / 1000;
+        const durationSec = (run.updatedAt.getTime() - run.runStartedAt.getTime()) / 1000;
         if (durationSec > 0 && durationSec < 7200) {
           // sanity check < 2hrs
           durationsSec.push(durationSec);
@@ -136,9 +135,7 @@ export async function collectTestQualitySignal(
     const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since);
 
     const testRuns = runs.filter(
-      (r) =>
-        r.name !== null &&
-        /test|spec|coverage|jest|vitest|pytest|mocha/i.test(r.name)
+      (r) => r.name !== null && /test|spec|coverage|jest|vitest|pytest|mocha/i.test(r.name)
     );
     testWorkflowsFound += testRuns.length;
 
@@ -162,8 +159,7 @@ export async function collectTestQualitySignal(
     }
   }
 
-  const flakyRate =
-    testWorkflowsFound > 0 ? (rerunWorkflows / testWorkflowsFound) * 100 : 0;
+  const flakyRate = testWorkflowsFound > 0 ? (rerunWorkflows / testWorkflowsFound) * 100 : 0;
 
   const evidence: Evidence[] = [
     {

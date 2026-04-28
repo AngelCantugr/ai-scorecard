@@ -1,13 +1,13 @@
-import type { Evidence } from './adapter.js';
+import type { Evidence } from "./adapter.js";
 
 /** The 6 dimensions of the scorecard */
 export type DimensionId =
-  | 'platform-infrastructure'
-  | 'developer-tooling'
-  | 'cicd-velocity'
-  | 'governance-security'
-  | 'observability-cost'
-  | 'documentation-context';
+  | "platform-infrastructure"
+  | "developer-tooling"
+  | "cicd-velocity"
+  | "governance-security"
+  | "observability-cost"
+  | "documentation-context";
 
 /** Dimension metadata */
 export interface Dimension {

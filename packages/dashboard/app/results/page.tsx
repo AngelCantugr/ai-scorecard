@@ -49,9 +49,7 @@ export default function ResultsPage() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
         <p className="text-slate-300">{error}</p>
-        <Button onClick={() => router.push("/assess")}>
-          ← Run Assessment
-        </Button>
+        <Button onClick={() => router.push("/assess")}>← Run Assessment</Button>
       </div>
     );
   }
@@ -71,9 +69,7 @@ export default function ResultsPage() {
           <h1 className="text-3xl font-bold text-white">Assessment Results</h1>
           <p className="mt-1 text-slate-400">
             AI maturity scorecard for{" "}
-            <span className="font-medium text-white">
-              {result.metadata.target}
-            </span>
+            <span className="font-medium text-white">{result.metadata.target}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -87,19 +83,10 @@ export default function ResultsPage() {
             📄 {pdfLoading ? "Generating…" : "Download PDF"}
           </Button>
           {/* Share button placeholder — implemented in issue #13 */}
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled
-            title="Share link coming soon (issue #13)"
-          >
+          <Button variant="secondary" size="sm" disabled title="Share link coming soon (issue #13)">
             🔗 Share
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/assess")}
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.push("/assess")}>
             ← New Assessment
           </Button>
         </div>
