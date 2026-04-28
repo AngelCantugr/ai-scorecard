@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ScorecardResult } from "@ai-scorecard/core";
 import { ScoreCard } from "@/components/ScoreCard";
@@ -11,6 +11,25 @@ export default function ResultsPage() {
   const router = useRouter();
   const [result, setResult] = useState<ScorecardResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!result) return;
+    setPdfError(null);
+    setPdfLoading(true);
+    try {
+      // Dynamic import keeps @react-pdf/renderer out of the initial bundle
+      // and avoids SSR issues with Next.js
+      const { downloadPdf } = await import("@/lib/pdf");
+      await downloadPdf(result);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      setPdfError("PDF generation failed. Please try again.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [result]);
 
   useEffect(() => {
     try {
@@ -54,9 +73,16 @@ export default function ResultsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {/* PDF export placeholder — implemented in issue #12 */}
-          <Button variant="secondary" size="sm" disabled title="PDF export coming soon (issue #12)">
-            📄 Export PDF
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={pdfLoading}
+            onClick={() => {
+              void handleDownloadPdf();
+            }}
+            title="Download PDF report"
+          >
+            📄 {pdfLoading ? "Generating…" : "Download PDF"}
           </Button>
           {/* Share button placeholder — implemented in issue #13 */}
           <Button variant="secondary" size="sm" disabled title="Share link coming soon (issue #13)">
@@ -66,6 +92,7 @@ export default function ResultsPage() {
             ← New Assessment
           </Button>
         </div>
+        {pdfError && <p className="text-sm text-red-400">{pdfError}</p>}
       </div>
 
       {/* ScoreCard — full visualization implemented in issue #11 */}

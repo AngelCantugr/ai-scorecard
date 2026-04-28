@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-scorecard/adapters": "workspace:*",
     "@ai-scorecard/core": "workspace:*",
+    "@react-pdf/renderer": "4.4.0",
     "next": "^15.2.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

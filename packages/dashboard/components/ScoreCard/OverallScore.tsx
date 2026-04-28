@@ -41,13 +41,10 @@ export function OverallScore({ result }: OverallScoreProps) {
           <p className="text-5xl font-bold text-white">
             {result.totalScore}
             <span className="text-2xl text-slate-400">/{result.maxScore}</span>
-            <span className="ml-2 text-2xl text-slate-300">
-              ({result.percentage}%)
-            </span>
+            <span className="ml-2 text-2xl text-slate-300">({result.percentage}%)</span>
           </p>
           <p className={["mt-1 text-xl font-semibold", tierColor].join(" ")}>
-            {tierIcon} Level {result.tier.level} —{" "}
-            <span>{result.tier.label}</span>
+            {tierIcon} Level {result.tier.level} — <span>{result.tier.label}</span>
           </p>
           <p className="mt-2 text-sm text-slate-400">
             Assessment confidence:{" "}

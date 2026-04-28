@@ -22,9 +22,7 @@ export function QuestionRow({ question, questionScore }: QuestionRowProps) {
   const scoreLevel = questionScore.score;
   const rubricText = question.rubric[scoreLevel];
 
-  const evidenceSummaries = questionScore.evidence
-    .filter((e) => e.summary)
-    .slice(0, 2);
+  const evidenceSummaries = questionScore.evidence.filter((e) => e.summary).slice(0, 2);
 
   return (
     <div className="border-t border-slate-700/60 py-3">
@@ -44,9 +42,7 @@ export function QuestionRow({ question, questionScore }: QuestionRowProps) {
         </span>
         <ConfidenceBadge confidence={questionScore.confidence} />
       </div>
-      {rubricText && (
-        <p className="mt-1 text-xs text-slate-400 italic">"{rubricText}"</p>
-      )}
+      {rubricText && <p className="mt-1 text-xs text-slate-400 italic">"{rubricText}"</p>}
       {evidenceSummaries.length > 0 && (
         <ul className="mt-1 space-y-0.5">
           {evidenceSummaries.map((e, i) => (
