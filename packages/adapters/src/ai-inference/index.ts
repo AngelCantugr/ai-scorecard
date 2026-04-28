@@ -282,8 +282,8 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
     typeof v["questionId"] === "string" &&
     (v["score"] === 0 || v["score"] === 1 || v["score"] === 2) &&
     typeof v["confidence"] === "number" &&
-    (v["confidence"] as number) >= 0 &&
-    (v["confidence"] as number) <= 1 &&
+    v["confidence"] >= 0 &&
+    v["confidence"] <= 1 &&
     typeof v["reasoning"] === "string" &&
     typeof v["evidence_summary"] === "string"
   );
@@ -301,14 +301,14 @@ function isAIAnalysisResult(value: unknown): value is AIAnalysisResult {
  */
 function extractJsonArray(text: string): unknown[] | null {
   let searchFrom = 0;
-  while (true) {
+  for (;;) {
     const start = text.indexOf("[", searchFrom);
     if (start === -1) return null;
     const end = text.lastIndexOf("]");
     if (end === -1 || end < start) return null;
     try {
-      const parsed = JSON.parse(text.slice(start, end + 1));
-      if (Array.isArray(parsed)) return parsed;
+      const parsed: unknown = JSON.parse(text.slice(start, end + 1));
+      if (Array.isArray(parsed)) return parsed as unknown[];
     } catch {
       // This '[' wasn't the start of the target array — advance and try the next one.
     }

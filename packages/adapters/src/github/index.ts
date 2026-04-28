@@ -176,12 +176,13 @@ export class GitHubAdapter implements Adapter {
   private octokit: Octokit | null = null;
   private config: GitHubAdapterConfig | null = null;
 
-  async connect(config: AdapterConfig): Promise<void> {
+  connect(config: AdapterConfig): Promise<void> {
     const ghConfig = config as GitHubAdapterConfig;
     this.config = ghConfig;
     this.octokit = new Octokit({
       auth: ghConfig.token,
     });
+    return Promise.resolve();
   }
 
   async collect(): Promise<SignalResult[]> {

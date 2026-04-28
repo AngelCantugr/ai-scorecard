@@ -29,6 +29,19 @@ module.exports = {
         "@typescript-eslint/no-require-imports": "off",
       },
     },
+    {
+      // Test files use vi.fn() mocks and dynamic imports whose types ESLint can't
+      // fully resolve through moduleResolution:"bundler". Disable the unsafe-type
+      // rules here — the logic is covered by the test assertions themselves.
+      files: ["**/__tests__/**/*.ts", "**/*.test.ts"],
+      rules: {
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-return": "off",
+        "@typescript-eslint/no-unsafe-argument": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+      },
+    },
   ],
   ignorePatterns: [
     "node_modules/",

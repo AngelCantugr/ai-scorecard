@@ -466,7 +466,6 @@ describe("GitHubAdapter", () => {
     });
 
     it("scores 1 when only unreviewed direct commits touch AI config files", async () => {
-      const now = Date.now();
       const octokit = makeOctokit();
       (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
         data: [{ name: "repo-a", full_name: "test-org/repo-a", default_branch: "main" }],
