@@ -24,8 +24,7 @@ export function ShareButton({ encodedQuery }: ShareButtonProps) {
       input.value = url;
       document.body.appendChild(input);
       input.select();
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      document.execCommand("copy");
+      document.execCommand("copy"); // deprecated but safe fallback for non-HTTPS
       document.body.removeChild(input);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -34,7 +33,7 @@ export function ShareButton({ encodedQuery }: ShareButtonProps) {
 
   return (
     <div className="relative inline-flex flex-col items-end gap-1">
-      <Button variant="secondary" size="sm" onClick={handleShare}>
+      <Button variant="secondary" size="sm" onClick={() => { void handleShare(); }}>
         🔗 {copied ? "Copied!" : "Share Results"}
       </Button>
       {copied && (

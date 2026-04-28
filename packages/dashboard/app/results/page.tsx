@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ScorecardResult } from "@ai-scorecard/core";
 import { encodeResults, decodeResults } from "@ai-scorecard/core";
@@ -11,6 +11,14 @@ import { ShareButton } from "@/components/Share/ShareButton";
 import { SharedBanner } from "@/components/Share/SharedBanner";
 
 export default function ResultsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner label="Loading results…" />}>
+      <ResultsPageContent />
+    </Suspense>
+  );
+}
+
+function ResultsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [result, setResult] = useState<ScorecardResult | null>(null);
