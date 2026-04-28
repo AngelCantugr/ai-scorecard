@@ -11,14 +11,14 @@ const tierIcons: Record<number, string> = {
 const tierTextColors: Record<number, string> = {
   1: "text-slate-400",
   2: "text-yellow-400",
-  3: "text-blue-400",
+  3: "text-orange-400",
   4: "text-green-400",
 };
 
 const tierBgColors: Record<number, string> = {
   1: "bg-slate-700/50",
   2: "bg-yellow-900/30 border-yellow-700/50",
-  3: "bg-blue-900/30 border-blue-700/50",
+  3: "bg-orange-900/30 border-orange-700/50",
   4: "bg-green-900/30 border-green-700/50",
 };
 
