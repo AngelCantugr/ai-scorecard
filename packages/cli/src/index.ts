@@ -21,7 +21,17 @@ program
 
 program
   .command("assess")
-  .description("Run a full AI adoption assessment")
+  .description(
+    [
+      "Run a full AI adoption assessment.",
+      "",
+      "Exit codes:",
+      "  0  clean run",
+      "  1  unexpected failure (validation error, network failure, etc.)",
+      "  2  one or more collectors reported an auth error — scores reflect",
+      "     a misconfigured token, not the org's real maturity",
+    ].join("\n")
+  )
   .option("--github-org <org>", "GitHub organization to assess", config.github?.org)
   .option(
     "--github-token <token>",

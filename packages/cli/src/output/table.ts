@@ -7,6 +7,7 @@ import chalk from "chalk";
 import type { ScorecardResult, QuestionScore } from "@ai-scorecard/core";
 import { questions } from "@ai-scorecard/core";
 import { getUnaddressedQuestions, getLowConfidenceQuestions } from "@ai-scorecard/core";
+import type { CollectorError, CollectorErrorKind } from "@ai-scorecard/adapters";
 
 const BOX_WIDTH = 60;
 
@@ -87,10 +88,30 @@ function tierEmoji(level: number): string {
   }
 }
 
+/** Bucket counts and first message per error kind. */
+function groupErrors(
+  errors: readonly CollectorError[]
+): Array<{ kind: CollectorErrorKind; count: number; firstMessage: string }> {
+  const buckets = new Map<CollectorErrorKind, { count: number; firstMessage: string }>();
+  for (const err of errors) {
+    const existing = buckets.get(err.kind);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      buckets.set(err.kind, { count: 1, firstMessage: err.message });
+    }
+  }
+  return Array.from(buckets.entries()).map(([kind, data]) => ({
+    kind,
+    count: data.count,
+    firstMessage: data.firstMessage,
+  }));
+}
+
 /**
  * Render the scorecard as a box-drawing table and print to stdout.
  */
-export function outputTable(result: ScorecardResult): void {
+export function outputTable(result: ScorecardResult, errors: readonly CollectorError[] = []): void {
   const lines: string[] = [];
 
   lines.push(top());
@@ -145,6 +166,32 @@ export function outputTable(result: ScorecardResult): void {
     lines.push(divider());
     for (const lc of lowConf) {
       lines.push(row(formatLowConfRow(lc)));
+    }
+  }
+
+  // Adapter diagnostics
+  if (errors.length > 0) {
+    lines.push(divider());
+    lines.push(sectionHeader("ADAPTER DIAGNOSTICS"));
+    lines.push(divider());
+    const grouped = groupErrors(errors);
+    const hasAuth = grouped.some((g) => g.kind === "auth");
+    if (hasAuth) {
+      lines.push(
+        row(chalk.red("⚠ Auth errors reported — scores may reflect a misconfigured token."))
+      );
+    }
+    for (const g of grouped) {
+      const tag =
+        g.kind === "auth"
+          ? chalk.red(`auth (${g.count})`)
+          : g.kind === "rate_limit"
+            ? chalk.yellow(`rate_limit (${g.count})`)
+            : g.kind === "not_found"
+              ? chalk.gray(`not_found (${g.count})`)
+              : chalk.yellow(`unexpected (${g.count})`);
+      const msg = truncate(g.firstMessage, BOX_WIDTH - 24);
+      lines.push(row(`${tag}: ${msg}`));
     }
   }
 

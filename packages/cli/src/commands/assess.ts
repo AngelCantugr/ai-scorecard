@@ -8,7 +8,7 @@ import type { SignalResult, ScorecardResult } from "@ai-scorecard/core";
 import { computeScorecard } from "@ai-scorecard/core";
 import { GitHubAdapter } from "@ai-scorecard/adapters";
 import { AIInferenceEngine } from "@ai-scorecard/adapters";
-import type { ContentBundle } from "@ai-scorecard/adapters";
+import type { ContentBundle, CollectorError } from "@ai-scorecard/adapters";
 import { outputTable } from "../output/table.js";
 import { outputJson } from "../output/json.js";
 import { outputMarkdown } from "../output/markdown.js";
@@ -55,6 +55,13 @@ function dryRun(options: AssessOptions): void {
  *   3. Optionally run AI inference
  *   4. Compute scorecard
  *   5. Output results
+ *
+ * Exit codes:
+ *   0 — clean run
+ *   1 — unexpected failure (validation error, network down, etc.)
+ *   2 — at least one collector reported an auth-classified error; the
+ *       reported scores reflect a misconfigured token, not real org
+ *       maturity, and should not be trusted.
  */
 export async function runAssess(options: AssessOptions): Promise<void> {
   // ── Dry run ────────────────────────────────────────────────────────────────
@@ -107,9 +114,12 @@ export async function runAssess(options: AssessOptions): Promise<void> {
   // ── Step 2: Collect signals ────────────────────────────────────────────────
   const collectSpinner = ora(`Collecting signals from ${org}…`).start();
   let githubSignals: SignalResult[] = [];
+  let collectorErrors: readonly CollectorError[] = [];
 
   try {
-    githubSignals = await adapter.collect();
+    const collectOutcome = await adapter.collectWithDiagnostics();
+    githubSignals = collectOutcome.results;
+    collectorErrors = collectOutcome.errors;
     collectSpinner.succeed(`Collected ${githubSignals.length} signals from GitHub`);
   } catch (err) {
     collectSpinner.fail("Signal collection failed");
@@ -129,7 +139,6 @@ export async function runAssess(options: AssessOptions): Promise<void> {
         ...(options.model !== undefined ? { model: options.model } : {}),
       });
 
-      // Build a minimal ContentBundle from the collected evidence
       const bundle: ContentBundle = {
         source: `github:${org}`,
         files: githubSignals
@@ -139,7 +148,7 @@ export async function runAssess(options: AssessOptions): Promise<void> {
               content: typeof e.data === "string" ? e.data : JSON.stringify(e.data),
             }))
           )
-          .slice(0, 50), // Keep token usage reasonable
+          .slice(0, 50),
         metadata: { org },
       };
 
@@ -170,16 +179,25 @@ export async function runAssess(options: AssessOptions): Promise<void> {
 
   switch (outputFormat) {
     case "json":
-      outputJson(result);
+      outputJson(result, collectorErrors);
       break;
     case "markdown":
-      outputMarkdown(result);
+      outputMarkdown(result, collectorErrors);
       break;
     default:
-      outputTable(result);
+      outputTable(result, collectorErrors);
   }
 
   if (outputFormat !== "json") {
     console.log(chalk.gray(`\nCompleted in ${elapsed}s`));
+  }
+
+  // ── Exit code ──────────────────────────────────────────────────────────────
+  // Auth-classified errors mean the token can't read what we tried to scan,
+  // so the resulting scores reflect a misconfigured run, not real org
+  // maturity. Exit 2 (distinct from 1) so CI/wrappers can detect this.
+  const hasAuthErrors = collectorErrors.some((e) => e.kind === "auth");
+  if (hasAuthErrors) {
+    process.exit(2);
   }
 }
