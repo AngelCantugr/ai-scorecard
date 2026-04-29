@@ -1,5 +1,10 @@
 import type { Octokit } from "@octokit/rest";
 import type { SignalResult, Evidence } from "@ai-scorecard/core";
+import {
+  createCollectorContext,
+  type CollectorContext,
+  type CollectorOutcome,
+} from "../collector-error.js";
 
 /** Files that indicate an AI gateway is configured */
 const GATEWAY_CONFIG_FILES = [
@@ -57,14 +62,27 @@ export interface RepoInfo {
   defaultBranch: string;
 }
 
+/** Pull a numeric `status` from a thrown value if present. */
+function statusOf(err: unknown): number | undefined {
+  if (err === null || typeof err !== "object") return undefined;
+  const s = (err as { status?: unknown }).status;
+  return typeof s === "number" ? s : undefined;
+}
+
 /**
  * Safely fetch the tree of a repo at HEAD and return a flat list of file paths.
+ *
+ * 404 is treated as an expected per-repo "no readable tree" outcome and is not
+ * reported (a healthy run scanning private/empty repos sees many of these).
+ * Auth (401/403), rate-limit (429), and unexpected errors are recorded on
+ * `ctx` so the orchestrator can surface them.
  */
 async function fetchRepoFilePaths(
   octokit: Octokit,
   owner: string,
   repo: string,
-  defaultBranch: string
+  defaultBranch: string,
+  ctx: CollectorContext
 ): Promise<string[]> {
   try {
     const { data } = await octokit.git.getTree({
@@ -78,15 +96,30 @@ async function fetchRepoFilePaths(
       .map((item) => item.path ?? "")
       .filter(Boolean);
   } catch (err) {
-    // Swallow expected HTTP errors (repo not accessible), re-throw unexpected errors
-    const status =
-      err !== null && typeof err === "object" && "status" in err
-        ? (err as { status: number }).status
-        : undefined;
-    if (status === 404 || status === 403) {
-      return [];
+    if (statusOf(err) === 404) return [];
+    ctx.report(err);
+    return [];
+  }
+}
+
+/** Read a file's content; null on 404, reports other errors. */
+async function safeReadFile(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  path: string,
+  ctx: CollectorContext
+): Promise<string | null> {
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path });
+    if (!Array.isArray(data) && "content" in data && data.content) {
+      return Buffer.from(data.content, "base64").toString("utf-8");
     }
-    throw err;
+    return null;
+  } catch (err) {
+    if (statusOf(err) === 404) return null;
+    ctx.report(err);
+    return null;
   }
 }
 
@@ -99,7 +132,8 @@ async function fetchRepoFilePaths(
 export async function collectGatewaySignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q1-gateway");
   const matchedRepos: string[] = [];
 
   for (const repo of repos) {
@@ -107,7 +141,8 @@ export async function collectGatewaySignal(
       octokit,
       repo.fullName.split("/")[0] ?? "",
       repo.name,
-      repo.defaultBranch
+      repo.defaultBranch,
+      ctx
     );
     const hasGateway = GATEWAY_CONFIG_FILES.some((gf) =>
       paths.some((p) => p === gf || p.endsWith(`/${gf}`))
@@ -129,34 +164,32 @@ export async function collectGatewaySignal(
   ];
 
   let score: 0 | 1 | 2 = 0;
-  if (matchedRepos.length === 1)
-    score = 2; // Single dedicated repo = centralized
-  else if (matchedRepos.length >= 2) score = 1; // Multiple repos = distributed, partial credit
+  if (matchedRepos.length === 1) score = 2;
+  else if (matchedRepos.length >= 2) score = 1;
 
   return {
-    signalId: "github:repo-scan:q1-gateway",
-    questionId: "D1-Q1",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D1-Q1",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q5 — Prompt/template management system
- * Score 0: no prompt dirs found
- * Score 1: prompt dirs exist in some repos
- * Score 2: prompt dirs in multiple repos (suggests org-wide practice)
- */
+/** Q5 — Prompt/template management system */
 export async function collectPromptManagementSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q5-prompt-management");
   const matchedRepos: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
     const hasPromptDir = PROMPT_DIRS.some((dir) =>
       paths.some((p) => p === dir || p.startsWith(`${dir}/`) || p.includes(`/${dir}/`))
     );
@@ -181,29 +214,28 @@ export async function collectPromptManagementSignal(
   else if (matchedRepos.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q5-prompt-management",
-    questionId: "D1-Q5",
-    score,
-    evidence,
-    confidence: 0.5,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D1-Q5",
+      score,
+      evidence,
+      confidence: 0.5,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q7 — AI steering files
- * Score 0: no steering files found
- * Score 1: some repos have steering files
- * Score 2: majority of repos have steering files
- */
+/** Q7 — AI steering files */
 export async function collectSteeringFilesSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q7-steering-files");
   const matchedRepos: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
     const hasSteeringFile = STEERING_FILES.some((sf) => paths.some((p) => p === sf));
     if (hasSteeringFile) {
       matchedRepos.push(repo.fullName);
@@ -232,58 +264,47 @@ export async function collectSteeringFilesSignal(
   else if (coverage > 0) score = 1;
 
   return {
-    signalId: "github:repo-scan:q7-steering-files",
-    questionId: "D2-Q7",
-    score,
-    evidence,
-    confidence: 0.9,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D2-Q7",
+      score,
+      evidence,
+      confidence: 0.9,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q8 — AI rules for linting/testing/debugging
- * Score 0: no steering files with content depth
- * Score 1: steering files exist but shallow
- * Score 2: steering files with comprehensive rules
- */
+/** Q8 — AI rules for linting/testing/debugging */
 export async function collectAIRulesSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q8-ai-rules");
   const comprehensiveRepos: string[] = [];
   const basicRepos: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
-    // Only attempt getContent for files that actually exist in the repo tree
     const steeringCandidates = ["CLAUDE.md", ".cursorrules", "agents.md"].filter((sf) =>
       paths.some((p) => p === sf)
     );
 
     for (const steeringFile of steeringCandidates) {
-      try {
-        const { data } = await octokit.repos.getContent({
-          owner,
-          repo: repo.name,
-          path: steeringFile,
-        });
-        if (!Array.isArray(data) && "content" in data && data.content) {
-          const content = Buffer.from(data.content, "base64").toString("utf-8");
-          const hasLintRules = /lint|eslint|prettier|format/i.test(content);
-          const hasTestRules = /test|jest|vitest|spec|coverage/i.test(content);
-          const hasDebugRules = /debug|breakpoint|log|trace/i.test(content);
-          const ruleCount = [hasLintRules, hasTestRules, hasDebugRules].filter(Boolean).length;
-          if (ruleCount >= 2) {
-            comprehensiveRepos.push(repo.fullName);
-          } else if (content.length > 200) {
-            basicRepos.push(repo.fullName);
-          }
-          break;
+      const content = await safeReadFile(octokit, owner, repo.name, steeringFile, ctx);
+      if (content !== null) {
+        const hasLintRules = /lint|eslint|prettier|format/i.test(content);
+        const hasTestRules = /test|jest|vitest|spec|coverage/i.test(content);
+        const hasDebugRules = /debug|breakpoint|log|trace/i.test(content);
+        const ruleCount = [hasLintRules, hasTestRules, hasDebugRules].filter(Boolean).length;
+        if (ruleCount >= 2) {
+          comprehensiveRepos.push(repo.fullName);
+        } else if (content.length > 200) {
+          basicRepos.push(repo.fullName);
         }
-      } catch {
-        // ignore
+        break;
       }
     }
   }
@@ -304,24 +325,23 @@ export async function collectAIRulesSignal(
   else if (basicRepos.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q8-ai-rules",
-    questionId: "D2-Q8",
-    score,
-    evidence,
-    confidence: 0.5,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D2-Q8",
+      score,
+      evidence,
+      confidence: 0.5,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q21 — Prompt security (prompts not in client code)
- * Score 0: prompts found in frontend/client directories
- * Score 1: no client-side prompt exposure detected, but no confirmed server-side management
- * Score 2: prompt directories found in server-side paths with no client exposure
- */
+/** Q21 — Prompt security (prompts not in client code) */
 export async function collectPromptSecuritySignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q21-prompt-security");
   const exposedRepos: string[] = [];
   const serverSidePromptRepos: string[] = [];
   const clientDirPatterns = [
@@ -336,7 +356,7 @@ export async function collectPromptSecuritySignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const promptInClientCode = paths.some(
       (p) =>
@@ -349,7 +369,6 @@ export async function collectPromptSecuritySignal(
       continue;
     }
 
-    // Check for server-side prompt directories (confirms intentional server-side management)
     const hasServerPromptDir = serverPromptDirs.some((dir) =>
       paths.some((p) => p === dir || p.startsWith(`${dir}/`))
     );
@@ -375,33 +394,35 @@ export async function collectPromptSecuritySignal(
   if (exposedRepos.length > 0) {
     score = 0;
   } else if (serverSidePromptRepos.length > 0) {
-    score = 2; // Confirmed server-side prompt management, no client exposure
+    score = 2;
   } else if (repos.length > 0) {
-    score = 1; // No client exposure, but no confirmed server-side prompt dirs either
+    score = 1;
   }
 
   return {
-    signalId: "github:repo-scan:q21-prompt-security",
-    questionId: "D4-Q21",
-    score,
-    evidence,
-    confidence: 0.4,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D4-Q21",
+      score,
+      evidence,
+      confidence: 0.4,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q25 — Tracing (OpenTelemetry, Langfuse, etc.)
- */
+/** Q25 — Tracing (OpenTelemetry, Langfuse, etc.) */
 export async function collectTracingSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q25-tracing");
   const matchedRepos: string[] = [];
   const matchedFiles: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
     const tracingFiles = OBSERVABILITY_FILES.filter((of) =>
       paths.some((p) => p === of || p.endsWith(`/${of}`))
     );
@@ -410,26 +431,15 @@ export async function collectTracingSignal(
       matchedFiles.push(...tracingFiles.map((f) => `${repo.fullName}:${f}`));
     }
 
-    // Also check package.json for observability deps
     const hasObsDep = paths.some((p) => p === "package.json");
     if (hasObsDep) {
-      try {
-        const { data } = await octokit.repos.getContent({
-          owner,
-          repo: repo.name,
-          path: "package.json",
-        });
-        if (!Array.isArray(data) && "content" in data && data.content) {
-          const content = Buffer.from(data.content, "base64").toString("utf-8");
-          if (
-            /@opentelemetry|langfuse|langsmith|@datadog|newrelic/i.test(content) &&
-            !matchedRepos.includes(repo.fullName)
-          ) {
-            matchedRepos.push(repo.fullName);
-          }
-        }
-      } catch {
-        // ignore
+      const content = await safeReadFile(octokit, owner, repo.name, "package.json", ctx);
+      if (
+        content !== null &&
+        /@opentelemetry|langfuse|langsmith|@datadog|newrelic/i.test(content) &&
+        !matchedRepos.includes(repo.fullName)
+      ) {
+        matchedRepos.push(repo.fullName);
       }
     }
   }
@@ -450,27 +460,29 @@ export async function collectTracingSignal(
   else if (matchedRepos.length === 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q25-tracing",
-    questionId: "D5-Q25",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D5-Q25",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q31 — AI-friendly documentation (OpenAPI, JSDoc, TypeScript types)
- */
+/** Q31 — AI-friendly documentation (OpenAPI, JSDoc, TypeScript types) */
 export async function collectDocumentationSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q31-ai-friendly-docs");
   const openapiRepos: string[] = [];
   const typescriptRepos: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const hasOpenAPI = OPENAPI_FILES.some((of) =>
       paths.some((p) => p === of || p.endsWith(`/${of}`))
@@ -500,50 +512,40 @@ export async function collectDocumentationSignal(
   else if (hasStructuredDocs) score = 1;
 
   return {
-    signalId: "github:repo-scan:q31-ai-friendly-docs",
-    questionId: "D6-Q31",
-    score,
-    evidence,
-    confidence: 0.6,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D6-Q31",
+      score,
+      evidence,
+      confidence: 0.6,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q32 — Spec accuracy (OpenAPI validated in CI)
- */
+/** Q32 — Spec accuracy (OpenAPI validated in CI) */
 export async function collectSpecAccuracySignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q32-spec-accuracy");
   const specsFound: string[] = [];
   const specsValidatedInCI: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const hasSpec = OPENAPI_FILES.some((of) => paths.some((p) => p === of || p.endsWith(`/${of}`)));
     if (!hasSpec) continue;
     specsFound.push(repo.fullName);
 
-    // Check if any GitHub Actions workflow references the spec
     const workflowPaths = paths.filter((p) => p.startsWith(".github/workflows/"));
     for (const wfPath of workflowPaths) {
-      try {
-        const { data } = await octokit.repos.getContent({
-          owner,
-          repo: repo.name,
-          path: wfPath,
-        });
-        if (!Array.isArray(data) && "content" in data && data.content) {
-          const content = Buffer.from(data.content, "base64").toString("utf-8");
-          if (/openapi|swagger|spectral|redoc|prism/i.test(content)) {
-            specsValidatedInCI.push(repo.fullName);
-            break;
-          }
-        }
-      } catch {
-        // ignore
+      const content = await safeReadFile(octokit, owner, repo.name, wfPath, ctx);
+      if (content !== null && /openapi|swagger|spectral|redoc|prism/i.test(content)) {
+        specsValidatedInCI.push(repo.fullName);
+        break;
       }
     }
   }
@@ -564,10 +566,13 @@ export async function collectSpecAccuracySignal(
   else if (specsFound.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q32-spec-accuracy",
-    questionId: "D6-Q32",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D6-Q32",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }
