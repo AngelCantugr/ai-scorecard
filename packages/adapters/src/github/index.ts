@@ -29,6 +29,11 @@ import {
   collectHumanOversightSignal,
   collectVersionedInstructionsSignal,
 } from "./collectors/agents.js";
+import {
+  collectEvalFrameworkSignal,
+  collectEvalDatasetSignal,
+  collectBenchmarkSuiteSignal,
+} from "./collectors/eval.js";
 
 const DEFAULT_MAX_REPOS = 50;
 
@@ -144,6 +149,24 @@ const GITHUB_SIGNALS: Signal[] = [
     id: "github:repo-scan:q41-versioned-instructions",
     questionId: "D7-Q41",
     description: "Check git history on agent instruction files, PR review patterns",
+  },
+  {
+    id: "github:eval:q42-eval-framework",
+    questionId: "D8-Q42",
+    description:
+      "Scan for eval framework deps (LangSmith, Braintrust, deepeval, etc.) and CI eval runs",
+  },
+  {
+    id: "github:eval:q44-eval-datasets",
+    questionId: "D8-Q44",
+    description:
+      "Scan repos for eval dataset directories (evals/, eval/, golden/, etc.)",
+  },
+  {
+    id: "github:eval:q45-benchmark-suite",
+    questionId: "D8-Q45",
+    description:
+      "Detect benchmark CI steps and branch-protection rules referencing eval status checks",
   },
 ];
 
@@ -337,6 +360,18 @@ export class GitHubAdapter implements Adapter {
       {
         signal: GITHUB_SIGNALS[21]!,
         run: () => withRetry(() => collectVersionedInstructionsSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[22]!,
+        run: () => withRetry(() => collectEvalFrameworkSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[23]!,
+        run: () => withRetry(() => collectEvalDatasetSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[24]!,
+        run: () => withRetry(() => collectBenchmarkSuiteSignal(octokit, repos)),
       },
     ];
 
