@@ -1,4 +1,5 @@
 ---
+name: developer
 description: Senior developer agent. Implements features and bug fixes following project conventions, validates with typecheck and tests, and accepts context from explorer and feedback from reviewer.
 ---
 

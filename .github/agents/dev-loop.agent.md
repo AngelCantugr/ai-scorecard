@@ -1,4 +1,5 @@
 ---
+name: dev-loop
 description: Dev-loop orchestrator. Coordinates explorer, developer, and reviewer agents in an iterative development cycle. Runs up to 5 developer-reviewer iterations, stopping early when the reviewer scores the implementation 8/10 or higher.
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: reviewer
 description: Outcome-focused code reviewer. Scores implementation 1-10 against the original problem statement. Prioritizes whether the problem is actually solved over surface-level acceptance criteria mapping.
 ---
 
