@@ -2,7 +2,7 @@
 
 This is an open-source TypeScript monorepo that generates evidence-based AI maturity
 scorecards for engineering organizations. It collects real signals from GitHub, CI/CD, and
-developer tooling to produce a 0–70 point score across 6 dimensions.
+developer tooling to produce a 0–94 point score across 8 dimensions.
 
 Full project context, architecture, conventions, and agent instructions are in
 [AGENTS.md](../AGENTS.md).

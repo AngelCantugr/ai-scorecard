@@ -1,45 +1,47 @@
 import Link from "next/link";
+import { dimensions, type DimensionId } from "@ai-scorecard/core";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-const DIMENSIONS = [
-  {
-    id: "D1",
-    name: "Platform & Infrastructure",
+const DIMENSION_PRESENTATION: Record<DimensionId, { icon: string; description: string }> = {
+  "platform-infrastructure": {
     icon: "🏗️",
     description: "AI gateways, secret management, and prompt version control.",
   },
-  {
-    id: "D2",
-    name: "Developer Tooling & Adoption",
+  "developer-tooling": {
     icon: "🛠️",
     description: "Steering files, AI rules, and measurable agent task adoption.",
   },
-  {
-    id: "D3",
-    name: "CI/CD & Velocity",
+  "cicd-velocity": {
     icon: "⚡",
     description: "Pipeline scaling, AI-assisted code review, and PR cycle time.",
   },
-  {
-    id: "D4",
-    name: "Governance & Security",
+  "governance-security": {
     icon: "🔒",
     description: "AI artifact lifecycle, prompt security, and attribution standards.",
   },
-  {
-    id: "D5",
-    name: "Observability & Cost",
+  "observability-cost": {
     icon: "📊",
     description: "LLM tracing, token cost tracking, and quality feedback loops.",
   },
-  {
-    id: "D6",
-    name: "Documentation & Context Engineering",
+  "documentation-context": {
     icon: "📚",
     description: "AI-friendly docs, OpenAPI specs, and context-aware onboarding.",
   },
-];
+  "agent-maturity": {
+    icon: "🤖",
+    description: "Agent scoping, structured outputs, oversight, and versioned instructions.",
+  },
+  "eval-quality": {
+    icon: "🧪",
+    description: "Automated eval frameworks, CI gates, datasets, and regression detection.",
+  },
+};
+
+const TOTAL_POINTS = dimensions.reduce((sum, d) => sum + d.maxScore, 0);
+const DIMENSION_COUNT = dimensions.length;
+const MIN_DIM_SCORE = Math.min(...dimensions.map((d) => d.maxScore));
+const MAX_DIM_SCORE = Math.max(...dimensions.map((d) => d.maxScore));
 
 export default function HomePage() {
   return (
@@ -56,8 +58,8 @@ export default function HomePage() {
             <span className="text-indigo-400">for Engineering Leaders</span>
           </h1>
           <p className="mx-auto mb-10 max-w-2xl text-lg text-slate-300">
-            Benchmark your organisation&apos;s AI maturity across 6 dimensions in minutes — straight
-            from your GitHub data, with no manual questionnaires.
+            Benchmark your organisation&apos;s AI maturity across {DIMENSION_COUNT} dimensions in
+            minutes — straight from your GitHub data, with no manual questionnaires.
           </p>
           <Link href="/assess">
             <Button size="lg" className="shadow-lg shadow-indigo-900/40">
@@ -67,29 +69,35 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6 Dimensions */}
+      {/* Dimensions */}
       <section className="bg-slate-900 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-white">6 Dimensions of AI Maturity</h2>
+            <h2 className="text-3xl font-bold text-white">
+              {DIMENSION_COUNT} Dimensions of AI Maturity
+            </h2>
             <p className="mt-3 text-slate-400">
-              Each dimension is scored 0–14 pts, giving a total of 70 points across four tiers.
+              Each dimension is scored {MIN_DIM_SCORE}–{MAX_DIM_SCORE} pts, totaling {TOTAL_POINTS}{" "}
+              points across four tiers.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {DIMENSIONS.map((dim) => (
-              <Card key={dim.id}>
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl" aria-hidden="true">
-                    {dim.icon}
-                  </span>
-                  <div>
-                    <h3 className="mb-1 font-semibold text-white">{dim.name}</h3>
-                    <p className="text-sm text-slate-400">{dim.description}</p>
+            {dimensions.map((dim) => {
+              const presentation = DIMENSION_PRESENTATION[dim.id];
+              return (
+                <Card key={dim.id}>
+                  <div className="flex items-start gap-4">
+                    <span className="text-3xl" aria-hidden="true">
+                      {presentation.icon}
+                    </span>
+                    <div>
+                      <h3 className="mb-1 font-semibold text-white">{dim.name}</h3>
+                      <p className="text-sm text-slate-400">{presentation.description}</p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
