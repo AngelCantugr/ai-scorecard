@@ -555,30 +555,31 @@ describe("GitHubAdapter", () => {
     });
   });
 
-  describe("collector fallback behavior", () => {
-    it("emits a zero-score result with confidence 0 when a collector throws", async () => {
+  describe("collector error reporting", () => {
+    it("classifies underlying errors and surfaces them as CollectorErrors", async () => {
       const octokit = makeOctokit();
       (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
         data: [{ name: "test-repo", full_name: "test-org/test-repo", default_branch: "main" }],
       });
-      // Make git.getTree throw an unrecoverable error — will affect multiple repo-scan collectors
+      // Make git.getTree throw an unrecoverable error — affects every repo-scan collector
       (octokit.git as Record<string, Mock>)["getTree"] = vi
         .fn()
         .mockRejectedValue(new Error("unexpected API error"));
 
       const adapter = await createConnectedAdapter(octokit);
-      const results = await adapter.collect();
+      const { results, errors } = await adapter.collectWithDiagnostics();
 
-      // Output must always have exactly 22 entries
+      // Output array length is invariant across error modes
       expect(results).toHaveLength(25);
 
-      // Any failed collector should produce confidence:0 and score:0
-      const failedResults = results.filter((r) => r.confidence === 0);
-      expect(failedResults.length).toBeGreaterThan(0);
-      for (const r of failedResults) {
-        expect(r.score).toBe(0);
-        expect(r.evidence[0]?.summary).toContain("Collector failed");
+      // Underlying generic Error -> classified "unexpected"
+      expect(errors.length).toBeGreaterThan(0);
+      for (const e of errors) {
+        expect(e.kind).toBe("unexpected");
       }
+
+      // Same errors are exposed on the adapter for code that called collect()
+      expect(adapter.lastErrors).toBe(errors);
     });
   });
 
