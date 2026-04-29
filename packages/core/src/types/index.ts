@@ -1,4 +1,5 @@
 export type { AdapterConfig, Signal, Evidence, SignalResult, Adapter } from "./adapter.js";
+export { EvidenceSchema, SignalResultSchema } from "./adapter.js";
 export type {
   DimensionId,
   Dimension,

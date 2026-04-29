@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ScorecardResult } from "@ai-scorecard/core";
 import { encodeResults, decodeResults } from "@ai-scorecard/core";
 import { ScoreCard } from "@/components/ScoreCard";
+import { DataSourceBadge } from "@/components/ScoreCard/DataSourceBadge";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ShareButton } from "@/components/Share/ShareButton";
@@ -130,6 +131,14 @@ function ResultsPageContent() {
           </Button>
         </div>
         {pdfError && <p className="text-sm text-red-400">{pdfError}</p>}
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-xs text-slate-400">
+        <span>Each question shows where its score came from:</span>
+        <DataSourceBadge source="github" />
+        <span>= deterministic GitHub data;</span>
+        <DataSourceBadge source="ai-inference" />
+        <span>= LLM judgment (lower confidence by design).</span>
       </div>
 
       <ScoreCard result={result} />

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** Configuration passed to an adapter to connect to a data source */
 export interface AdapterConfig {
   /** Adapter-specific configuration (e.g., GitHub token, org name) */
@@ -49,3 +51,26 @@ export interface Adapter {
   /** Collect all signals from the data source */
   collect(): Promise<SignalResult[]>;
 }
+
+/**
+ * Runtime schema for {@link Evidence}. Used at the engine boundary
+ * ({@link computeScorecard}) to reject malformed adapter or AI-inferred output
+ * before it can corrupt a score. Mirrors the {@link Evidence} interface.
+ */
+export const EvidenceSchema: z.ZodType<Evidence> = z.object({
+  source: z.string().min(1, "Evidence.source must be a non-empty string"),
+  data: z.unknown(),
+  summary: z.string().min(1, "Evidence.summary must be a non-empty string"),
+});
+
+/**
+ * Runtime schema for {@link SignalResult}. Enforces the score (0/1/2) and
+ * confidence ([0, 1]) invariants the scoring engine relies on.
+ */
+export const SignalResultSchema: z.ZodType<SignalResult> = z.object({
+  signalId: z.string().min(1, "SignalResult.signalId must be a non-empty string"),
+  questionId: z.string().min(1, "SignalResult.questionId must be a non-empty string"),
+  score: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  evidence: z.array(EvidenceSchema),
+  confidence: z.number().min(0).max(1),
+});

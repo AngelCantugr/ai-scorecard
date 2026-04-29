@@ -15,8 +15,8 @@
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "pretest": "tsc --project tsconfig.build.json",
-    "test": "vitest run src/github/__tests__/github-adapter.test.ts src/github/__tests__/agents.test.ts src/github/__tests__/collector-error.test.ts && node --test src/ai-inference/__tests__/ai-inference.test.mjs",
-    "lint": "eslint src --ext .ts",
+    "test": "vitest run src/github/__tests__/github-adapter.test.ts src/github/__tests__/agents.test.ts src/github/__tests__/eval.test.ts src/github/__tests__/collector-error.test.ts test/collectors && node --test src/ai-inference/__tests__/ai-inference.test.mjs",
+    "lint": "eslint src test --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

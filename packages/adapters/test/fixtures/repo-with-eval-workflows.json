@@ -1,0 +1,16 @@
+{
+  "_description": "Git tree for a repo with eval workflow + manifest. References promptfoo and ragas in package.json; .github/workflows/eval.yml runs promptfoo eval.",
+  "data": {
+    "sha": "def456",
+    "url": "https://api.github.com/repos/test-org/repo-with-evals/git/trees/def456",
+    "tree": [
+      { "type": "blob", "path": "package.json", "sha": "2aaa", "mode": "100644" },
+      { "type": "blob", "path": ".github/workflows/eval.yml", "sha": "2bbb", "mode": "100644" },
+      { "type": "blob", "path": ".github/workflows/ci.yml", "sha": "2ccc", "mode": "100644" },
+      { "type": "blob", "path": "evals/golden.jsonl", "sha": "2ddd", "mode": "100644" },
+      { "type": "blob", "path": "evals/judge-prompts.md", "sha": "2eee", "mode": "100644" },
+      { "type": "blob", "path": "src/index.ts", "sha": "2fff", "mode": "100644" }
+    ],
+    "truncated": false
+  }
+}

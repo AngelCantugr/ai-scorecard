@@ -5,7 +5,7 @@
 Open-source, automated AI adoption scorecard for engineering leaders at mid-size companies
 (50–500 engineers). Unlike self-assessment surveys, this tool **extracts real data** from
 repositories, CI/CD pipelines, and developer tooling to produce an evidence-based maturity
-score (0–70 points across 6 dimensions).
+score (0–94 points across 8 dimensions).
 
 ---
 

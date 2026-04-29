@@ -1,0 +1,25 @@
+{
+  "_description": "GET /repos/{owner}/{repo}/pulls?state=closed list response — closed merged PRs (last 30 days). Used in conjunction with pr-reviews-bot.json for Q16 (AI code review bots).",
+  "data": [
+    {
+      "number": 101,
+      "title": "feat: add login flow",
+      "body": "Implements user login.\n\nCo-authored-by: copilot <copilot@github.com>",
+      "state": "closed",
+      "merged_at": "__NOW_MINUS_2_DAYS__",
+      "created_at": "__NOW_MINUS_3_DAYS__",
+      "updated_at": "__NOW_MINUS_2_DAYS__",
+      "user": { "login": "alice" }
+    },
+    {
+      "number": 102,
+      "title": "fix: handle null pointer",
+      "body": null,
+      "state": "closed",
+      "merged_at": "__NOW_MINUS_5_DAYS__",
+      "created_at": "__NOW_MINUS_6_DAYS__",
+      "updated_at": "__NOW_MINUS_5_DAYS__",
+      "user": { "login": "bob" }
+    }
+  ]
+}

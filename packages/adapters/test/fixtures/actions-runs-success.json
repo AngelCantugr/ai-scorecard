@@ -1,0 +1,18 @@
+{
+  "_description": "GET /repos/{owner}/{repo}/actions/runs response — 60 fast successful CI runs over the last 30 days. Should score Q14 as 2 (totalRuns>50, failureRate<15%, medianDurationMin<15).",
+  "data": {
+    "total_count": 60,
+    "_note": "workflow_runs array generated programmatically in tests because each entry needs a relative timestamp; this fixture documents the response shape.",
+    "workflow_runs": [
+      {
+        "id": 1,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "__NOW_MINUS_1_HOUR__",
+        "updated_at": "__NOW_MINUS_1_HOUR_PLUS_10_MIN__",
+        "run_started_at": "__NOW_MINUS_1_HOUR__"
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "_description": "Sample .claude/agents/coder.md content with explicit allowedTools and structured output schema — should score Q36 as 2 (scope) and Q37 as 2 (structured outputs in 2+ repos when applied to multiple).",
+  "_decoded": "---\nname: coder\nallowedTools:\n  - read_file\n  - write_file\n  - bash\npermissions:\n  network: read\n  filesystem: scoped\noutputSchema:\n  type: object\n  properties:\n    summary: { type: string }\n    files: { type: array, items: { type: string } }\n  required: [summary]\n---\n\nWrite small, focused diffs. Do not modify files outside the requested scope.\n",
+  "content": "LS0tCm5hbWU6IGNvZGVyCmFsbG93ZWRUb29sczoKICAtIHJlYWRfZmlsZQogIC0gd3JpdGVfZmlsZQogIC0gYmFzaApwZXJtaXNzaW9uczoKICBuZXR3b3JrOiByZWFkCiAgZmlsZXN5c3RlbTogc2NvcGVkCm91dHB1dFNjaGVtYToKICB0eXBlOiBvYmplY3QKICBwcm9wZXJ0aWVzOgogICAgc3VtbWFyeTogeyB0eXBlOiBzdHJpbmcgfQogICAgZmlsZXM6IHsgdHlwZTogYXJyYXksIGl0ZW1zOiB7IHR5cGU6IHN0cmluZyB9IH0KICByZXF1aXJlZDogW3N1bW1hcnldCi0tLQoKV3JpdGUgc21hbGwsIGZvY3VzZWQgZGlmZnMuIERvIG5vdCBtb2RpZnkgZmlsZXMgb3V0c2lkZSB0aGUgcmVxdWVzdGVkIHNjb3BlLgo="
+}

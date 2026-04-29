@@ -1,5 +1,6 @@
 import type { Question, QuestionScore } from "@ai-scorecard/core";
 import { ConfidenceBadge } from "./ConfidenceBadge";
+import { DataSourceBadge, dominantSource } from "./DataSourceBadge";
 
 interface QuestionRowProps {
   question: Question;
@@ -23,6 +24,7 @@ export function QuestionRow({ question, questionScore }: QuestionRowProps) {
   const rubricText = question.rubric[scoreLevel];
 
   const evidenceSummaries = questionScore.evidence.filter((e) => e.summary).slice(0, 2);
+  const sourceKind = dominantSource(questionScore.evidence);
 
   return (
     <div className="border-t border-slate-700/60 py-3">
@@ -41,6 +43,7 @@ export function QuestionRow({ question, questionScore }: QuestionRowProps) {
           {scoreLevel}/2 — {scoreLabels[scoreLevel]}
         </span>
         <ConfidenceBadge confidence={questionScore.confidence} />
+        {sourceKind && <DataSourceBadge source={sourceKind} />}
       </div>
       {rubricText && <p className="mt-1 text-xs text-slate-400 italic">"{rubricText}"</p>}
       {evidenceSummaries.length > 0 && (
