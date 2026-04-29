@@ -13,7 +13,7 @@ CI/CD pipelines, and tooling configs and computes a score from real signals — 
 no guesswork.
 
 Built for **CTOs and engineering leaders at 50–500-engineer organizations** who want a
-repeatable, data-driven answer to: *"How far along are we, really?"*
+repeatable, data-driven answer to: _"How far along are we, really?"_
 
 ---
 
@@ -45,14 +45,14 @@ read-only token, and get a structured report in seconds.
 Your score is built from **35 questions** across **6 dimensions** (max 2 points each,
 70 points total). Each question is backed by evidence extracted from your repos.
 
-| # | Dimension | Questions | Max Points | What It Measures |
-|---|-----------|:---------:|:----------:|-----------------|
-| 1 | **Platform & Infrastructure** | 6 | 12 | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene |
-| 2 | **Developer Tooling & Adoption** | 7 | 14 | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage |
-| 3 | **CI/CD & Velocity** | 6 | 12 | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time |
-| 4 | **Governance & Security** | 5 | 10 | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process |
-| 5 | **Observability & Cost** | 6 | 12 | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics |
-| 6 | **Documentation & Context Engineering** | 5 | 10 | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs |
+| #   | Dimension                               | Questions | Max Points | What It Measures                                                                                                              |
+| --- | --------------------------------------- | :-------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Platform & Infrastructure**           |     6     |     12     | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene                                     |
+| 2   | **Developer Tooling & Adoption**        |     7     |     14     | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage              |
+| 3   | **CI/CD & Velocity**                    |     6     |     12     | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time |
+| 4   | **Governance & Security**               |     5     |     10     | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process                           |
+| 5   | **Observability & Cost**                |     6     |     12     | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics                         |
+| 6   | **Documentation & Context Engineering** |     5     |     10     | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs                     |
 
 See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidence sources.
 
@@ -60,12 +60,12 @@ See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidenc
 
 ## Maturity Tiers
 
-| Tier | Score | Label |
-|------|-------|-------|
-| Level 1 | 0–17 | 🔵 AI-Curious |
+| Tier    | Score | Label               |
+| ------- | ----- | ------------------- |
+| Level 1 | 0–17  | 🔵 AI-Curious       |
 | Level 2 | 18–35 | 🟡 AI-Experimenting |
-| Level 3 | 36–52 | 🟠 AI-Scaling |
-| Level 4 | 53–70 | 🟢 AI-Native |
+| Level 3 | 36–52 | 🟠 AI-Scaling       |
+| Level 4 | 53–70 | 🟢 AI-Native        |
 
 ---
 
@@ -76,18 +76,32 @@ See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidenc
 - Node.js ≥ 18
 - A GitHub personal access token with **read-only** org access:
   `repo`, `read:org`, `read:user`
-- *(Optional)* An Anthropic API key for AI inference on questions that can't be
+- _(Optional)_ An Anthropic API key for AI inference on questions that can't be
   directly measured from repo data
 
 ### Install
 
-```bash
-# Using npx (no install required)
-npx @ai-scorecard/cli assess --github-org <your-org> --github-token <token>
+> **Note:** `@ai-scorecard/cli` is not yet published to npm. Until the first release, run from source:
 
-# Or install globally
-npm install -g @ai-scorecard/cli
+```bash
+git clone https://github.com/AngelCantugr/ai-scorecard.git
+cd ai-scorecard
+pnpm install && pnpm build
+
+# Run directly
+node packages/cli/dist/index.js assess --github-org <your-org> --github-token <token>
+
+# Or expose the `ai-scorecard` binary globally via npm link
+cd packages/cli && npm link
 ai-scorecard assess --github-org <your-org> --github-token <token>
+```
+
+Once published, install will be a one-liner:
+
+```bash
+# Coming after the first npm release
+npx @ai-scorecard/cli assess --github-org <your-org> --github-token <token>
+npm install -g @ai-scorecard/cli
 ```
 
 ### Run Your First Assessment
@@ -172,17 +186,17 @@ Completed in 8.3s
 
 ## All CLI Options
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--github-org <org>` | GitHub organization to assess | — |
-| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var) | — |
-| `--ai-inference` | Enable LLM analysis for unmeasurable questions | off |
-| `--anthropic-key <key>` | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | — |
-| `--model <model>` | LLM model to use for inference | `claude-sonnet-4-6` |
-| `--output <format>` | `table` \| `json` \| `markdown` | `table` |
-| `--repos <list>` | Comma-separated repo names to scope the scan | all repos |
-| `--max-repos <n>` | Maximum repos to scan | `50` |
-| `--dry-run` | Print config and exit — no API calls | off |
+| Flag                     | Description                                        | Default             |
+| ------------------------ | -------------------------------------------------- | ------------------- |
+| `--github-org <org>`     | GitHub organization to assess                      | —                   |
+| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var)             | —                   |
+| `--ai-inference`         | Enable LLM analysis for unmeasurable questions     | off                 |
+| `--anthropic-key <key>`  | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | —                   |
+| `--model <model>`        | LLM model to use for inference                     | `claude-sonnet-4-6` |
+| `--output <format>`      | `table` \| `json` \| `markdown`                    | `table`             |
+| `--repos <list>`         | Comma-separated repo names to scope the scan       | all repos           |
+| `--max-repos <n>`        | Maximum repos to scan                              | `50`                |
+| `--dry-run`              | Print config and exit — no API calls               | off                 |
 
 ---
 
@@ -193,13 +207,18 @@ packages/
 ├── adapters/     # Data collection — GitHub API, CI/CD signals
 ├── core/         # Scoring engine, 35 questions, evidence model, tiers
 ├── cli/          # CLI entry point and formatters (table, JSON, Markdown)
-└── dashboard/    # Next.js continuous monitoring dashboard (coming in V2)
+└── dashboard/    # Next.js results UI — radar chart, dimension breakdown, gap
+                  # analysis, PDF export, URL-encoded shareable links
 ```
 
 Data flows strictly in one direction: **adapters → core → cli/dashboard**.
 
 The adapter layer abstracts data sources. GitHub is the V1 adapter; GitLab, Jira, and
 Slack adapters are planned for V2.
+
+The dashboard already renders interactive results from a CLI run (paste a JSON output
+or open a shareable link). Live continuous monitoring with scheduled re-scans is the
+remaining V2 milestone — see the roadmap.
 
 ---
 
@@ -260,18 +279,23 @@ agent instructions for AI-assisted development on this repo.
 - [x] GitHub adapter — repos, PRs, Actions, security settings
 - [x] Scoring engine — 35 questions, 6 dimensions, confidence levels
 - [x] CLI — table / JSON / Markdown output, dry-run mode
-- [ ] Dashboard — continuous monitoring web UI (V2)
+- [x] Dashboard — radar chart, dimension breakdown, gap analysis, PDF export, shareable links
+- [ ] npm release of `@ai-scorecard/cli` (V1 launch blocker)
+- [ ] Continuous monitoring — scheduled re-scans + trend tracking (V2)
 - [ ] GitLab adapter (V2)
 - [ ] Anonymous org benchmarking — "how do you compare to similar-sized orgs?" (V2)
-- [ ] Trend tracking — retake over time and see delta (V2)
 - [ ] Prior Art & Related Frameworks comparison (coming soon)
 
 ---
 
 ## Try It On Your Repo
 
+Until the first npm release, clone and run from source:
+
 ```bash
-npx @ai-scorecard/cli assess \
+git clone https://github.com/AngelCantugr/ai-scorecard.git
+cd ai-scorecard && pnpm install && pnpm build
+node packages/cli/dist/index.js assess \
   --github-org <your-org> \
   --github-token <your-token>
 ```
@@ -284,4 +308,4 @@ Support the project: [GitHub Sponsors](https://github.com/sponsors/AngelCantugr)
 
 ---
 
-*Built for engineering leaders who want evidence, not vibes.*
+_Built for engineering leaders who want evidence, not vibes._
