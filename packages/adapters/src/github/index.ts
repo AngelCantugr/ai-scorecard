@@ -127,7 +127,8 @@ const GITHUB_SIGNALS: Signal[] = [
   {
     id: "github:repo-scan:q38-composable-workflows",
     questionId: "D7-Q38",
-    description: "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
+    description:
+      "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
   },
   {
     id: "github:repo-scan:q39-session-logging",

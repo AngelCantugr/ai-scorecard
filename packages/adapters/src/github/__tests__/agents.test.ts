@@ -59,10 +59,9 @@ function makeOctokit(
 describe("collectAgentScopeSignal", () => {
   it("scores 2 when agent files contain explicit scope keywords", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".github/agents/coder.md"],
-      { ".github/agents/coder.md": 'allowedTools: ["read_file", "write_file"]' }
-    );
+    const octokit = makeOctokit([".github/agents/coder.md"], {
+      ".github/agents/coder.md": 'allowedTools: ["read_file", "write_file"]',
+    });
 
     const result = await collectAgentScopeSignal(octokit as never, [repo]);
 
@@ -75,10 +74,9 @@ describe("collectAgentScopeSignal", () => {
 
   it("scores 1 when agent dirs exist but no scope definitions in content", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".github/agents/coder.md"],
-      { ".github/agents/coder.md": "# My Agent\nDo some stuff." }
-    );
+    const octokit = makeOctokit([".github/agents/coder.md"], {
+      ".github/agents/coder.md": "# My Agent\nDo some stuff.",
+    });
 
     const result = await collectAgentScopeSignal(octokit as never, [repo]);
 
@@ -98,10 +96,9 @@ describe("collectAgentScopeSignal", () => {
 
   it("handles malformed/empty agent file content gracefully", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".claude/agents/assistant.json"],
-      { ".claude/agents/assistant.json": "" }
-    );
+    const octokit = makeOctokit([".claude/agents/assistant.json"], {
+      ".claude/agents/assistant.json": "",
+    });
 
     const result = await collectAgentScopeSignal(octokit as never, [repo]);
 
@@ -112,10 +109,9 @@ describe("collectAgentScopeSignal", () => {
 
   it("detects permissions keyword in agent files", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      ["agents/bot.yaml"],
-      { "agents/bot.yaml": "permissions:\n  read: true\n  write: false" }
-    );
+    const octokit = makeOctokit(["agents/bot.yaml"], {
+      "agents/bot.yaml": "permissions:\n  read: true\n  write: false",
+    });
 
     const result = await collectAgentScopeSignal(octokit as never, [repo]);
 
@@ -124,10 +120,9 @@ describe("collectAgentScopeSignal", () => {
 
   it("detects devcontainer paths as agent-adjacent evidence", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".devcontainer/devcontainer.json"],
-      { ".devcontainer/devcontainer.json": '{"sandboxed": true, "allowedTools": ["bash"]}' }
-    );
+    const octokit = makeOctokit([".devcontainer/devcontainer.json"], {
+      ".devcontainer/devcontainer.json": '{"sandboxed": true, "allowedTools": ["bash"]}',
+    });
 
     const result = await collectAgentScopeSignal(octokit as never, [repo]);
 
@@ -142,10 +137,9 @@ describe("collectAgentScopeSignal", () => {
 describe("collectStructuredOutputsSignal", () => {
   it("scores 2 when schema definitions found in 2+ repos", async () => {
     const repos = [makeRepo("repo-a"), makeRepo("repo-b")];
-    const octokit = makeOctokit(
-      [".github/agents/extractor.md"],
-      { ".github/agents/extractor.md": 'outputSchema: { type: "object", properties: {} }' }
-    );
+    const octokit = makeOctokit([".github/agents/extractor.md"], {
+      ".github/agents/extractor.md": 'outputSchema: { type: "object", properties: {} }',
+    });
 
     const result = await collectStructuredOutputsSignal(octokit as never, repos);
 
@@ -158,10 +152,9 @@ describe("collectStructuredOutputsSignal", () => {
 
   it("scores 1 when schema definitions found in exactly 1 repo", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".github/agents/extractor.md"],
-      { ".github/agents/extractor.md": "response_format: json_object" }
-    );
+    const octokit = makeOctokit([".github/agents/extractor.md"], {
+      ".github/agents/extractor.md": "response_format: json_object",
+    });
 
     const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
@@ -181,10 +174,9 @@ describe("collectStructuredOutputsSignal", () => {
 
   it("detects Zod validator imports in agent-adjacent TypeScript files", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".github/agents/processor.ts"],
-      { ".github/agents/processor.ts": 'import { z } from "zod";\nconst schema = z.object({});' }
-    );
+    const octokit = makeOctokit([".github/agents/processor.ts"], {
+      ".github/agents/processor.ts": 'import { z } from "zod";\nconst schema = z.object({});',
+    });
 
     const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
@@ -211,10 +203,7 @@ describe("collectStructuredOutputsSignal", () => {
 describe("collectComposableWorkflowsSignal", () => {
   it("scores 2 when multiple composability signals found across repos", async () => {
     const repos = [makeRepo("repo-a"), makeRepo("repo-b")];
-    const octokit = makeOctokit([
-      ".github/workflows/copilot-setup-steps.yml",
-      ".mcp.json",
-    ]);
+    const octokit = makeOctokit([".github/workflows/copilot-setup-steps.yml", ".mcp.json"]);
 
     const result = await collectComposableWorkflowsSignal(octokit as never, repos);
 
@@ -259,7 +248,10 @@ describe("collectComposableWorkflowsSignal", () => {
     const octokit = {
       git: { getTree: vi.fn().mockRejectedValue({ status: 403 }) },
       repos: { getContent: vi.fn().mockRejectedValue({ status: 404 }) },
-      pulls: { list: vi.fn().mockResolvedValue({ data: [] }), listFiles: vi.fn().mockResolvedValue({ data: [] }) },
+      pulls: {
+        list: vi.fn().mockResolvedValue({ data: [] }),
+        listFiles: vi.fn().mockResolvedValue({ data: [] }),
+      },
     };
 
     const result = await collectComposableWorkflowsSignal(octokit as never, [repo]);
@@ -280,10 +272,9 @@ describe("collectSessionLoggingSignal", () => {
       preToolUse: [{ matcher: "*", hooks: [{ type: "command", command: "echo pre" }] }],
       postToolUse: [{ matcher: "*", hooks: [{ type: "command", command: "echo post" }] }],
     });
-    const octokit = makeOctokit(
-      [".github/hooks/tools.json"],
-      { ".github/hooks/tools.json": hookContent }
-    );
+    const octokit = makeOctokit([".github/hooks/tools.json"], {
+      ".github/hooks/tools.json": hookContent,
+    });
 
     const result = await collectSessionLoggingSignal(octokit as never, [repo]);
 
@@ -296,10 +287,9 @@ describe("collectSessionLoggingSignal", () => {
 
   it("scores 1 when hook files exist but lack preToolUse/postToolUse", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".github/hooks/basic.json"],
-      { ".github/hooks/basic.json": '{"version": 1}' }
-    );
+    const octokit = makeOctokit([".github/hooks/basic.json"], {
+      ".github/hooks/basic.json": '{"version": 1}',
+    });
 
     const result = await collectSessionLoggingSignal(octokit as never, [repo]);
 
@@ -319,10 +309,9 @@ describe("collectSessionLoggingSignal", () => {
 
   it("detects hook keywords in agent files", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".claude/agents/assistant.md"],
-      { ".claude/agents/assistant.md": "hooks:\n  logging: true\n  sessionLog: /var/log/session" }
-    );
+    const octokit = makeOctokit([".claude/agents/assistant.md"], {
+      ".claude/agents/assistant.md": "hooks:\n  logging: true\n  sessionLog: /var/log/session",
+    });
 
     const result = await collectSessionLoggingSignal(octokit as never, [repo]);
 
@@ -331,10 +320,9 @@ describe("collectSessionLoggingSignal", () => {
 
   it("handles invalid JSON in hook files without throwing", async () => {
     const repo = makeRepo();
-    const octokit = makeOctokit(
-      [".claude/hooks/broken.json"],
-      { ".claude/hooks/broken.json": "this is not json {{{{" }
-    );
+    const octokit = makeOctokit([".claude/hooks/broken.json"], {
+      ".claude/hooks/broken.json": "this is not json {{{{",
+    });
 
     const result = await collectSessionLoggingSignal(octokit as never, [repo]);
 
@@ -359,10 +347,9 @@ describe("collectHumanOversightSignal", () => {
         },
       ],
     });
-    const octokit = makeOctokit(
-      [".github/hooks/approval.json"],
-      { ".github/hooks/approval.json": hookContent }
-    );
+    const octokit = makeOctokit([".github/hooks/approval.json"], {
+      ".github/hooks/approval.json": hookContent,
+    });
 
     const result = await collectHumanOversightSignal(octokit as never, [repo]);
 
@@ -384,10 +371,9 @@ jobs:
       url: https://example.com
     runs-on: ubuntu-latest
 `;
-    const octokit = makeOctokit(
-      [".github/workflows/deploy.yml"],
-      { ".github/workflows/deploy.yml": workflowContent }
-    );
+    const octokit = makeOctokit([".github/workflows/deploy.yml"], {
+      ".github/workflows/deploy.yml": workflowContent,
+    });
 
     const result = await collectHumanOversightSignal(octokit as never, [repo]);
 
@@ -399,10 +385,9 @@ jobs:
     const hookContent = JSON.stringify({
       postToolUse: [{ matcher: "*", hooks: [{ type: "command", command: "log-action" }] }],
     });
-    const octokit = makeOctokit(
-      [".github/hooks/post.json"],
-      { ".github/hooks/post.json": hookContent }
-    );
+    const octokit = makeOctokit([".github/hooks/post.json"], {
+      ".github/hooks/post.json": hookContent,
+    });
 
     const result = await collectHumanOversightSignal(octokit as never, [repo]);
 

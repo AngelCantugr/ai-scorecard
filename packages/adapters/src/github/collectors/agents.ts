@@ -6,7 +6,13 @@ import type { RepoInfo } from "./repo-scan.js";
 const AGENT_DIRS = [".github/agents", ".claude/agents", "agents"];
 
 /** MCP server config file names */
-const MCP_CONFIG_FILES = [".mcp.json", "mcp.json", "mcp-config.json", ".claude.json", "claude_desktop_config.json"];
+const MCP_CONFIG_FILES = [
+  ".mcp.json",
+  "mcp.json",
+  "mcp-config.json",
+  ".claude.json",
+  "claude_desktop_config.json",
+];
 
 /** Agent registry/catalog file names */
 const AGENT_REGISTRY_FILES = ["agents.yaml", "agents.yml"];
@@ -85,11 +91,12 @@ export async function collectAgentScopeSignal(
     const owner = repo.fullName.split("/")[0] ?? "";
     const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
 
-    const agentFiles = paths.filter((p) =>
-      AGENT_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`)) ||
-      p === ".devcontainer/devcontainer.json" ||
-      p === "devcontainer.json" ||
-      p.startsWith(".devcontainer/")
+    const agentFiles = paths.filter(
+      (p) =>
+        AGENT_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`)) ||
+        p === ".devcontainer/devcontainer.json" ||
+        p === "devcontainer.json" ||
+        p.startsWith(".devcontainer/")
     );
 
     if (agentFiles.length === 0) continue;
@@ -155,9 +162,9 @@ export async function collectStructuredOutputsSignal(
     const owner = repo.fullName.split("/")[0] ?? "";
     const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
 
-    const agentFiles = paths.filter((p) =>
-      AGENT_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`)) ||
-      p.endsWith(".schema.json")
+    const agentFiles = paths.filter(
+      (p) =>
+        AGENT_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`)) || p.endsWith(".schema.json")
     );
 
     let foundSchema = false;
@@ -173,9 +180,10 @@ export async function collectStructuredOutputsSignal(
 
     // Check adjacent TypeScript/JavaScript files for Zod or JSON Schema imports
     if (!foundSchema) {
-      const agentAdjacentFiles = paths.filter((p) =>
-        AGENT_DIRS.some((dir) => p.startsWith(`${dir}/`)) &&
-        (p.endsWith(".ts") || p.endsWith(".js"))
+      const agentAdjacentFiles = paths.filter(
+        (p) =>
+          AGENT_DIRS.some((dir) => p.startsWith(`${dir}/`)) &&
+          (p.endsWith(".ts") || p.endsWith(".js"))
       );
       for (const filePath of agentAdjacentFiles.slice(0, 5)) {
         const content = await safeReadFile(octokit, owner, repo.name, filePath);
