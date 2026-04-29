@@ -19,7 +19,7 @@ jobs:
   copilot-setup-steps:
     name: Warm up Copilot agent environment
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
     env:
       TURBO_TELEMETRY_DISABLED: 1
     steps:
