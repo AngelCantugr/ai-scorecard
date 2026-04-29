@@ -12,6 +12,7 @@ import type {
   Tier,
   TierLevel,
 } from "@ai-scorecard/core";
+import { encodeResults, decodeResults, SHARE_VERSION } from "@ai-scorecard/core";
 
 const config: AdapterConfig = {
   token: "test-token",
@@ -102,3 +103,11 @@ const scorecardResult: ScorecardResult = {
 };
 
 void scorecardResult;
+
+// Verify share functions are exported and correctly typed
+const _encode: (r: ScorecardResult) => string = encodeResults;
+const _decode: (s: string) => ScorecardResult = decodeResults;
+const _version: string = SHARE_VERSION;
+void _encode;
+void _decode;
+void _version;

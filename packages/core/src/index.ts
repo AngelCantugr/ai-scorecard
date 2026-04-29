@@ -40,3 +40,4 @@ export {
   getUnaddressedQuestions,
   getLowConfidenceQuestions,
 } from "./analysis.js";
+export { encodeResults, decodeResults, SHARE_VERSION } from "./share.js";
