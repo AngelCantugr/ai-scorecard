@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import type { Adapter, AdapterConfig, Signal, SignalResult } from "@ai-scorecard/core";
 import type { GitHubAdapterConfig } from "./config.js";
+import { classifyError, type CollectorError, type CollectorOutcome } from "./collector-error.js";
 import {
   collectGatewaySignal,
   collectPromptManagementSignal,
@@ -169,9 +170,6 @@ const GITHUB_SIGNALS: Signal[] = [
   },
 ];
 
-/**
- * Sleep for the given number of milliseconds.
- */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -191,7 +189,6 @@ function isRateLimitError(err: unknown): boolean {
   if (e.status === 429) return true;
 
   if (e.status === 403) {
-    // Rate-limit 403: x-ratelimit-remaining is 0, or message mentions rate limiting
     const remaining = e.response?.headers?.["x-ratelimit-remaining"];
     if (remaining === "0") return true;
     if (typeof e.message === "string" && /rate.?limit|secondary rate/i.test(e.message)) return true;
@@ -201,8 +198,9 @@ function isRateLimitError(err: unknown): boolean {
 }
 
 /**
- * Wrap an async operation with exponential backoff on rate limit errors (429 or
- * rate-limit 403). Auth/permission 403s are NOT retried — they fail immediately.
+ * Wrap an async operation with exponential backoff on rate limit errors (429
+ * or rate-limit 403). Auth/permission 403s are NOT retried — they fail
+ * immediately.
  */
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelayMs = 1000): Promise<T> {
   let lastError: unknown;
@@ -215,7 +213,6 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelayMs =
         const delayMs = baseDelayMs * Math.pow(2, attempt);
         await sleep(delayMs);
       } else {
-        // Don't retry auth failures or other non-rate-limit errors
         throw err;
       }
     }
@@ -223,12 +220,30 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelayMs =
   throw lastError;
 }
 
+/** Result of a full GitHub adapter `collect()` invocation, with diagnostics. */
+export interface GitHubCollectResult {
+  /** One SignalResult per registered signal (length === signals.length). */
+  results: SignalResult[];
+  /** All errors recorded by collectors during the run, in order. */
+  errors: CollectorError[];
+}
+
 /**
- * GitHub adapter — collects AI maturity signals from GitHub org repos, PRs, and Actions.
+ * GitHub adapter — collects AI maturity signals from GitHub org repos, PRs,
+ * and Actions.
+ *
+ * `collect()` returns `SignalResult[]` to satisfy the `Adapter` interface.
+ * Use `collectWithDiagnostics()` to also receive the typed `CollectorError[]`
+ * surfaced from individual collectors (auth/rate-limit/unexpected). The most
+ * recent diagnostics are also retained on `lastErrors` after every call to
+ * either method.
  */
 export class GitHubAdapter implements Adapter {
   readonly name = "github";
   readonly signals: Signal[] = GITHUB_SIGNALS;
+
+  /** Errors recorded during the most recent collect() / collectWithDiagnostics(). */
+  lastErrors: readonly CollectorError[] = [];
 
   private octokit: Octokit | null = null;
   private config: GitHubAdapterConfig | null = null;
@@ -243,6 +258,11 @@ export class GitHubAdapter implements Adapter {
   }
 
   async collect(): Promise<SignalResult[]> {
+    const { results } = await this.collectWithDiagnostics();
+    return results;
+  }
+
+  async collectWithDiagnostics(): Promise<GitHubCollectResult> {
     if (!this.octokit || !this.config) {
       throw new Error("GitHubAdapter: call connect() before collect()");
     }
@@ -250,145 +270,192 @@ export class GitHubAdapter implements Adapter {
     const repos = await this.fetchRepos();
 
     if (repos.length === 0) {
-      // Return zero scores for all signals when org has no repos
-      return this.signals.map((signal) => ({
-        signalId: signal.id,
-        questionId: signal.questionId,
-        score: 0 as const,
-        evidence: [
-          {
-            source: "github:repos",
-            data: { totalRepos: 0 },
-            summary: "No repositories found in org.",
-          },
-        ],
-        confidence: 1.0,
-      }));
+      this.lastErrors = [];
+      return {
+        results: this.signals.map((signal) => ({
+          signalId: signal.id,
+          questionId: signal.questionId,
+          score: 0 as const,
+          evidence: [
+            {
+              source: "github:repos",
+              data: { totalRepos: 0 },
+              summary: "No repositories found in org.",
+            },
+          ],
+          confidence: 1.0,
+        })),
+        errors: [],
+      };
     }
 
     const octokit = this.octokit;
     const results: SignalResult[] = [];
+    const errors: CollectorError[] = [];
 
-    // Each entry pairs a signal with its collector so a failed collector can emit
-    // a zero-score fallback, keeping the output array length equal to this.signals.length.
-    const collectorPairs: Array<{ signal: Signal; run: () => Promise<SignalResult> }> = [
+    /**
+     * `outcome`-style runners return `CollectorOutcome<SignalResult>` (the
+     * refactored collectors). `signal`-style runners still return a bare
+     * `SignalResult` (legacy collectors not yet migrated, e.g. security.ts).
+     * We adapt both shapes here.
+     */
+    type Pair =
+      | { kind: "outcome"; signal: Signal; run: () => Promise<CollectorOutcome<SignalResult>> }
+      | { kind: "signal"; signal: Signal; run: () => Promise<SignalResult> };
+
+    const collectorPairs: Pair[] = [
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[0]!,
         run: () => withRetry(() => collectGatewaySignal(octokit, repos)),
       },
       {
+        kind: "signal",
         signal: GITHUB_SIGNALS[1]!,
         run: () => withRetry(() => collectSecretsManagementSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[2]!,
         run: () => withRetry(() => collectPromptManagementSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[3]!,
         run: () => withRetry(() => collectSteeringFilesSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[4]!,
         run: () => withRetry(() => collectAIRulesSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[5]!,
         run: () => withRetry(() => collectAgentTaskPercentSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[6]!,
         run: () => withRetry(() => collectPipelineScalingSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[7]!,
         run: () => withRetry(() => collectAICodeReviewSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[8]!,
         run: () => withRetry(() => collectTestQualitySignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[9]!,
         run: () => withRetry(() => collectPRCycleTimeSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[10]!,
         run: () => withRetry(() => collectAIArtifactSDLCSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[11]!,
         run: () => withRetry(() => collectPromptSecuritySignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[12]!,
         run: () => withRetry(() => collectAIAttributionSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[13]!,
         run: () => withRetry(() => collectTracingSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[14]!,
         run: () => withRetry(() => collectDocumentationSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[15]!,
         run: () => withRetry(() => collectSpecAccuracySignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[16]!,
         run: () => withRetry(() => collectAgentScopeSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[17]!,
         run: () => withRetry(() => collectStructuredOutputsSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[18]!,
         run: () => withRetry(() => collectComposableWorkflowsSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[19]!,
         run: () => withRetry(() => collectSessionLoggingSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[20]!,
         run: () => withRetry(() => collectHumanOversightSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[21]!,
         run: () => withRetry(() => collectVersionedInstructionsSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[22]!,
         run: () => withRetry(() => collectEvalFrameworkSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[23]!,
         run: () => withRetry(() => collectEvalDatasetSignal(octokit, repos)),
       },
       {
+        kind: "outcome",
         signal: GITHUB_SIGNALS[24]!,
         run: () => withRetry(() => collectBenchmarkSuiteSignal(octokit, repos)),
       },
     ];
 
-    for (const { signal, run } of collectorPairs) {
+    for (const pair of collectorPairs) {
       try {
-        results.push(await run());
+        if (pair.kind === "outcome") {
+          const outcome = await pair.run();
+          results.push(outcome.result);
+          errors.push(...outcome.errors);
+        } else {
+          results.push(await pair.run());
+        }
       } catch (err) {
-        console.warn(`GitHubAdapter: collector failed for ${signal.id}`, err);
-        // Emit a zero-score fallback so the output always has one result per signal
+        // Collector threw before producing a result (typical: withRetry
+        // exhausted attempts on a rate-limit, or an unhandled exception).
+        // Classify the error and emit a zero-score fallback so the output
+        // shape stays stable.
+        const classified = classifyError(pair.signal.id, err);
+        errors.push(classified);
         results.push({
-          signalId: signal.id,
-          questionId: signal.questionId,
+          signalId: pair.signal.id,
+          questionId: pair.signal.questionId,
           score: 0,
           evidence: [
             {
               source: "github:error",
-              data: { error: String(err) },
-              summary: "Collector failed — score unavailable.",
+              data: { error: classified.message, kind: classified.kind },
+              summary: `Collector failed (${classified.kind}) — score unavailable.`,
             },
           ],
           confidence: 0,
@@ -396,19 +463,17 @@ export class GitHubAdapter implements Adapter {
       }
     }
 
-    return results;
+    this.lastErrors = errors;
+    return { results, errors };
   }
 
-  /**
-   * Fetch repos for the org, respecting the maxRepos limit and optional allowlist.
-   */
+  /** Fetch repos for the org, respecting the maxRepos limit and optional allowlist. */
   private async fetchRepos(): Promise<RepoInfo[]> {
     if (!this.octokit || !this.config) return [];
 
     const { org, repos: repoAllowlist, maxRepos = DEFAULT_MAX_REPOS } = this.config;
 
     if (repoAllowlist && repoAllowlist.length > 0) {
-      // Fetch only specified repos
       const repoInfos: RepoInfo[] = [];
       for (const repoName of repoAllowlist.slice(0, maxRepos)) {
         try {
@@ -427,7 +492,6 @@ export class GitHubAdapter implements Adapter {
       return repoInfos;
     }
 
-    // Fetch all org repos up to maxRepos
     const repoInfos: RepoInfo[] = [];
     let page = 1;
     while (repoInfos.length < maxRepos) {
