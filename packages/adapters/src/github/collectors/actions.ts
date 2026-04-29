@@ -1,28 +1,15 @@
 import type { Octokit } from "@octokit/rest";
 import type { SignalResult, Evidence } from "@ai-scorecard/core";
 import type { RepoInfo } from "./repo-scan.js";
-import {
-  createCollectorContext,
-  type CollectorContext,
-  type CollectorOutcome,
-} from "../collector-error.js";
-
-function statusOf(err: unknown): number | undefined {
-  if (err === null || typeof err !== "object") return undefined;
-  const s = (err as { status?: unknown }).status;
-  return typeof s === "number" ? s : undefined;
-}
 
 /**
- * Fetch workflow runs for a repo over the last 30 days. Per-repo 404s are
- * tolerated silently; auth/rate-limit/unexpected errors are reported via `ctx`.
+ * Fetch workflow runs for a repo over the last 30 days.
  */
 async function fetchWorkflowRuns(
   octokit: Octokit,
   owner: string,
   repo: string,
-  since: Date,
-  ctx: CollectorContext
+  since: Date
 ): Promise<
   {
     id: number;
@@ -51,18 +38,19 @@ async function fetchWorkflowRuns(
       runStartedAt: run.run_started_at ? new Date(run.run_started_at) : null,
       name: run.name ?? null,
     }));
-  } catch (err) {
-    if (statusOf(err) !== 404) ctx.report(err);
+  } catch {
     return [];
   }
 }
 
-/** Q14 — CI/CD pipeline scaling */
+/**
+ * Q14 — CI/CD pipeline scaling
+ * Analyzes workflow run times, queue times, and failure rates.
+ */
 export async function collectPipelineScalingSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<CollectorOutcome<SignalResult>> {
-  const ctx = createCollectorContext("github:actions:q14-pipeline-scaling");
+): Promise<SignalResult> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   let totalRuns = 0;
   let failedRuns = 0;
@@ -70,7 +58,7 @@ export async function collectPipelineScalingSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since, ctx);
+    const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since);
     totalRuns += runs.length;
 
     for (const run of runs) {
@@ -80,6 +68,7 @@ export async function collectPipelineScalingSignal(
       if (run.runStartedAt !== null && run.conclusion !== null) {
         const durationSec = (run.updatedAt.getTime() - run.runStartedAt.getTime()) / 1000;
         if (durationSec > 0 && durationSec < 7200) {
+          // sanity check < 2hrs
           durationsSec.push(durationSec);
         }
       }
@@ -121,36 +110,36 @@ export async function collectPipelineScalingSignal(
   }
 
   return {
-    result: {
-      signalId: ctx.signalId,
-      questionId: "D3-Q14",
-      score,
-      evidence,
-      confidence: 0.7,
-    },
-    errors: ctx.errors(),
+    signalId: "github:actions:q14-pipeline-scaling",
+    questionId: "D3-Q14",
+    score,
+    evidence,
+    confidence: 0.7,
   };
 }
 
-/** Q17 — Test quality / flaky test rate */
+/**
+ * Q17 — Test quality / flaky test rate
+ * Analyzes test workflow results for flaky re-runs.
+ */
 export async function collectTestQualitySignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<CollectorOutcome<SignalResult>> {
-  const ctx = createCollectorContext("github:actions:q17-test-quality");
+): Promise<SignalResult> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   let testWorkflowsFound = 0;
   let rerunWorkflows = 0;
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since, ctx);
+    const runs = await fetchWorkflowRuns(octokit, owner, repo.name, since);
 
     const testRuns = runs.filter(
       (r) => r.name !== null && /test|spec|coverage|jest|vitest|pytest|mocha/i.test(r.name)
     );
     testWorkflowsFound += testRuns.length;
 
+    // Check for re-runs (same workflow name running multiple times in short succession)
     const runsByName = new Map<string, number[]>();
     for (const run of testRuns) {
       if (run.name) {
@@ -161,6 +150,7 @@ export async function collectTestQualitySignal(
     }
 
     for (const [, times] of runsByName) {
+      // If workflow ran more than expected (> 1.5 runs per day on average), suggest flakiness
       const daysCovered = 30;
       const runsPerDay = times.length / daysCovered;
       if (runsPerDay > 1.5) {
@@ -191,13 +181,10 @@ export async function collectTestQualitySignal(
   else if (testWorkflowsFound > 0) score = 1;
 
   return {
-    result: {
-      signalId: ctx.signalId,
-      questionId: "D3-Q17",
-      score,
-      evidence,
-      confidence: 0.4,
-    },
-    errors: ctx.errors(),
+    signalId: "github:actions:q17-test-quality",
+    questionId: "D3-Q17",
+    score,
+    evidence,
+    confidence: 0.4,
   };
 }
