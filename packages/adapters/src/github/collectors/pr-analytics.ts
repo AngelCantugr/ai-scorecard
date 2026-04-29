@@ -1,6 +1,11 @@
 import type { Octokit } from "@octokit/rest";
 import type { SignalResult, Evidence } from "@ai-scorecard/core";
 import type { RepoInfo } from "./repo-scan.js";
+import {
+  createCollectorContext,
+  type CollectorContext,
+  type CollectorOutcome,
+} from "../collector-error.js";
 
 /** Known AI review bot login names */
 const AI_REVIEW_BOTS = [
@@ -22,14 +27,23 @@ const AI_ATTRIBUTION_PATTERNS = [
   /authored by ai/i,
 ];
 
+function statusOf(err: unknown): number | undefined {
+  if (err === null || typeof err !== "object") return undefined;
+  const s = (err as { status?: unknown }).status;
+  return typeof s === "number" ? s : undefined;
+}
+
 /**
- * Fetch recent PRs for a repo (last 30 days).
+ * Fetch recent PRs for a repo (last 30 days). Per-call 404s are tolerated
+ * silently (private/archived repos); auth/rate-limit/unexpected errors are
+ * reported via `ctx`.
  */
 async function fetchRecentPRs(
   octokit: Octokit,
   owner: string,
   repo: string,
-  since: Date
+  since: Date,
+  ctx: CollectorContext
 ): Promise<
   {
     number: number;
@@ -41,8 +55,9 @@ async function fetchRecentPRs(
     commits: { message: string; authorLogin: string | undefined }[];
   }[]
 > {
+  let prs: Awaited<ReturnType<Octokit["pulls"]["list"]>>["data"];
   try {
-    const { data: prs } = await octokit.pulls.list({
+    const { data } = await octokit.pulls.list({
       owner,
       repo,
       state: "closed",
@@ -50,85 +65,84 @@ async function fetchRecentPRs(
       direction: "desc",
       per_page: 50,
     });
-
-    const recentPRs = prs.filter((pr) => pr.merged_at !== null && new Date(pr.updated_at) >= since);
-
-    // Sequential processing to avoid triggering GitHub secondary rate limits
-    const enriched: {
-      number: number;
-      createdAt: Date;
-      mergedAt: Date | null;
-      title: string;
-      body: string | null;
-      reviews: { login: string | undefined; body: string }[];
-      commits: { message: string; authorLogin: string | undefined }[];
-    }[] = [];
-
-    for (const pr of recentPRs.slice(0, 20)) {
-      let reviews: { login: string | undefined; body: string }[] = [];
-      let commits: { message: string; authorLogin: string | undefined }[] = [];
-
-      try {
-        const { data: reviewData } = await octokit.pulls.listReviews({
-          owner,
-          repo,
-          pull_number: pr.number,
-        });
-        reviews = reviewData.map((r) => ({
-          login: r.user?.login,
-          body: r.body ?? "",
-        }));
-      } catch {
-        // ignore
-      }
-
-      try {
-        const { data: commitData } = await octokit.pulls.listCommits({
-          owner,
-          repo,
-          pull_number: pr.number,
-          per_page: 20,
-        });
-        commits = commitData.map((c) => ({
-          message: c.commit.message,
-          authorLogin: c.author?.login ?? undefined,
-        }));
-      } catch {
-        // ignore
-      }
-
-      enriched.push({
-        number: pr.number,
-        createdAt: new Date(pr.created_at),
-        mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
-        title: pr.title,
-        body: pr.body,
-        reviews,
-        commits,
-      });
-    }
-
-    return enriched;
-  } catch {
+    prs = data;
+  } catch (err) {
+    if (statusOf(err) !== 404) ctx.report(err);
     return [];
   }
+
+  const recentPRs = prs.filter((pr) => pr.merged_at !== null && new Date(pr.updated_at) >= since);
+
+  const enriched: {
+    number: number;
+    createdAt: Date;
+    mergedAt: Date | null;
+    title: string;
+    body: string | null;
+    reviews: { login: string | undefined; body: string }[];
+    commits: { message: string; authorLogin: string | undefined }[];
+  }[] = [];
+
+  for (const pr of recentPRs.slice(0, 20)) {
+    let reviews: { login: string | undefined; body: string }[] = [];
+    let commits: { message: string; authorLogin: string | undefined }[] = [];
+
+    try {
+      const { data: reviewData } = await octokit.pulls.listReviews({
+        owner,
+        repo,
+        pull_number: pr.number,
+      });
+      reviews = reviewData.map((r) => ({
+        login: r.user?.login,
+        body: r.body ?? "",
+      }));
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
+    }
+
+    try {
+      const { data: commitData } = await octokit.pulls.listCommits({
+        owner,
+        repo,
+        pull_number: pr.number,
+        per_page: 20,
+      });
+      commits = commitData.map((c) => ({
+        message: c.commit.message,
+        authorLogin: c.author?.login ?? undefined,
+      }));
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
+    }
+
+    enriched.push({
+      number: pr.number,
+      createdAt: new Date(pr.created_at),
+      mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
+      title: pr.title,
+      body: pr.body,
+      reviews,
+      commits,
+    });
+  }
+
+  return enriched;
 }
 
-/**
- * Q13 — AI agent task percentage
- * Looks for bot commits and AI-generated PR labels.
- */
+/** Q13 — AI agent task percentage */
 export async function collectAgentTaskPercentSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:pr-analytics:q13-agent-task-percent");
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   let totalPRs = 0;
   let aiAttributedPRs = 0;
 
   for (const repo of repos.slice(0, 10)) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const prs = await fetchRecentPRs(octokit, owner, repo.name, since);
+    const prs = await fetchRecentPRs(octokit, owner, repo.name, since, ctx);
     totalPRs += prs.length;
 
     for (const pr of prs) {
@@ -164,22 +178,23 @@ export async function collectAgentTaskPercentSignal(
   else if (percentage >= 5) score = 1;
 
   return {
-    signalId: "github:pr-analytics:q13-agent-task-percent",
-    questionId: "D2-Q13",
-    score,
-    evidence,
-    confidence: 0.4,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D2-Q13",
+      score,
+      evidence,
+      confidence: 0.4,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q16 — AI-powered code review
- * Looks for bot review comments on PRs.
- */
+/** Q16 — AI-powered code review */
 export async function collectAICodeReviewSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:pr-analytics:q16-ai-code-review");
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   let totalReviews = 0;
   let botReviews = 0;
@@ -187,7 +202,7 @@ export async function collectAICodeReviewSignal(
 
   for (const repo of repos.slice(0, 10)) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const prs = await fetchRecentPRs(octokit, owner, repo.name, since);
+    const prs = await fetchRecentPRs(octokit, owner, repo.name, since, ctx);
 
     for (const pr of prs) {
       for (const review of pr.reviews) {
@@ -217,28 +232,29 @@ export async function collectAICodeReviewSignal(
   else if (botReviews > 0) score = 1;
 
   return {
-    signalId: "github:pr-analytics:q16-ai-code-review",
-    questionId: "D3-Q16",
-    score,
-    evidence,
-    confidence: 0.5,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D3-Q16",
+      score,
+      evidence,
+      confidence: 0.5,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q18 — PR cycle time
- * Calculates median open→merge time over last 30 days.
- */
+/** Q18 — PR cycle time */
 export async function collectPRCycleTimeSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:pr-analytics:q18-pr-cycle-time");
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const cycleTimes: number[] = [];
 
   for (const repo of repos.slice(0, 10)) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const prs = await fetchRecentPRs(octokit, owner, repo.name, since);
+    const prs = await fetchRecentPRs(octokit, owner, repo.name, since, ctx);
 
     for (const pr of prs) {
       if (pr.mergedAt !== null) {
@@ -272,30 +288,29 @@ export async function collectPRCycleTimeSignal(
     },
   ];
 
-  // Score: 0 = not measured, 1 = measured, 2 = measured and tracked (presence of data = measured)
   let score: 0 | 1 | 2 = 0;
   if (medianCycleHours !== null && cycleTimes.length >= 10) score = 2;
   else if (medianCycleHours !== null) score = 1;
 
   return {
-    signalId: "github:pr-analytics:q18-pr-cycle-time",
-    questionId: "D3-Q18",
-    score,
-    evidence,
-    confidence: 0.8,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D3-Q18",
+      score,
+      evidence,
+      confidence: 0.8,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q20 — AI artifact SDLC (AI configs reviewed via PRs)
- * Checks if AI config files have PR review history by listing merged PRs
- * and inspecting their changed files via pulls.listFiles.
- */
+/** Q20 — AI artifact SDLC (AI configs reviewed via PRs) */
 export async function collectAIArtifactSDLCSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
-  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:pr-analytics:q20-ai-artifact-sdlc");
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const reviewedRepos: string[] = [];
   const unreviewedRepos: string[] = [];
 
@@ -303,9 +318,9 @@ export async function collectAIArtifactSDLCSignal(
 
   for (const repo of repos.slice(0, 15)) {
     const owner = repo.fullName.split("/")[0] ?? "";
+    let prs: Awaited<ReturnType<Octokit["pulls"]["list"]>>["data"] = [];
     try {
-      // List recent merged PRs
-      const { data: prs } = await octokit.pulls.list({
+      const { data } = await octokit.pulls.list({
         owner,
         repo: repo.name,
         state: "closed",
@@ -313,46 +328,50 @@ export async function collectAIArtifactSDLCSignal(
         direction: "desc",
         per_page: 20,
       });
+      prs = data;
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
+      continue;
+    }
 
-      const mergedPRs = prs.filter(
-        (pr) => pr.merged_at !== null && new Date(pr.merged_at) >= since
-      );
+    const mergedPRs = prs.filter((pr) => pr.merged_at !== null && new Date(pr.merged_at) >= since);
 
-      let foundReviewedPR = false;
-      for (const pr of mergedPRs.slice(0, 10)) {
-        try {
-          const { data: files } = await octokit.pulls.listFiles({
-            owner,
-            repo: repo.name,
-            pull_number: pr.number,
-            per_page: 100,
-          });
-          const touchedAIConfig = files.some((f) => aiConfigFilePatterns.test(f.filename));
-          if (touchedAIConfig) {
-            foundReviewedPR = true;
-            break;
-          }
-        } catch {
-          // ignore per-PR failures
+    let foundReviewedPR = false;
+    for (const pr of mergedPRs.slice(0, 10)) {
+      try {
+        const { data: files } = await octokit.pulls.listFiles({
+          owner,
+          repo: repo.name,
+          pull_number: pr.number,
+          per_page: 100,
+        });
+        const touchedAIConfig = files.some((f) => aiConfigFilePatterns.test(f.filename));
+        if (touchedAIConfig) {
+          foundReviewedPR = true;
+          break;
         }
+      } catch (err) {
+        if (statusOf(err) !== 404) ctx.report(err);
       }
+    }
 
-      // Also check commits on main branch that touch these files (direct pushes)
+    let aiRelatedCommits: Awaited<ReturnType<Octokit["repos"]["listCommits"]>>["data"] = [];
+    try {
       const { data: commits } = await octokit.repos.listCommits({
         owner,
         repo: repo.name,
         since: since.toISOString(),
         per_page: 30,
       });
-      const aiRelatedCommits = commits.filter((c) => aiConfigFilePatterns.test(c.commit.message));
+      aiRelatedCommits = commits.filter((c) => aiConfigFilePatterns.test(c.commit.message));
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
+    }
 
-      if (foundReviewedPR) {
-        reviewedRepos.push(repo.fullName);
-      } else if (aiRelatedCommits.length > 0) {
-        unreviewedRepos.push(repo.fullName);
-      }
-    } catch {
-      // ignore per-repo failures
+    if (foundReviewedPR) {
+      reviewedRepos.push(repo.fullName);
+    } else if (aiRelatedCommits.length > 0) {
+      unreviewedRepos.push(repo.fullName);
     }
   }
 
@@ -372,21 +391,23 @@ export async function collectAIArtifactSDLCSignal(
   else if (reviewedRepos.length >= 1 || unreviewedRepos.length >= 1) score = 1;
 
   return {
-    signalId: "github:pr-analytics:q20-ai-artifact-sdlc",
-    questionId: "D4-Q20",
-    score,
-    evidence,
-    confidence: 0.5,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D4-Q20",
+      score,
+      evidence,
+      confidence: 0.5,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q23 — AI attribution in commits/PRs
- */
+/** Q23 — AI attribution in commits/PRs */
 export async function collectAIAttributionSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:pr-analytics:q23-ai-attribution");
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   let totalCommits = 0;
   let attributedCommits = 0;
@@ -408,8 +429,8 @@ export async function collectAIAttributionSignal(
           attributedCommits++;
         }
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
     }
   }
 
@@ -431,10 +452,13 @@ export async function collectAIAttributionSignal(
   else if (attributedCommits >= 1) score = 1;
 
   return {
-    signalId: "github:pr-analytics:q23-ai-attribution",
-    questionId: "D4-Q23",
-    score,
-    evidence,
-    confidence: 0.6,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D4-Q23",
+      score,
+      evidence,
+      confidence: 0.6,
+    },
+    errors: ctx.errors(),
   };
 }
