@@ -577,9 +577,6 @@ describe("GitHubAdapter", () => {
       for (const e of errors) {
         expect(e.kind).toBe("unexpected");
       }
-
-      // Same errors are exposed on the adapter for code that called collect()
-      expect(adapter.lastErrors).toBe(errors);
     });
   });
 

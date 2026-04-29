@@ -64,13 +64,44 @@ describe("classifyError", () => {
     expect(err.message).toBe("Bad creds");
   });
 
-  it("classifies 403 with non-rate-limit headers as auth", () => {
+  it("classifies 403 with credential-flavored message as auth", () => {
+    const err = classifyError("sig", {
+      status: 403,
+      message: "Bad credentials",
+      response: { headers: { "x-ratelimit-remaining": "4995" } },
+    });
+    expect(err.kind).toBe("auth");
+    if (err.kind === "auth") expect(err.status).toBe(403);
+  });
+
+  it("classifies 403 'Resource not accessible by integration' as unexpected (not auth)", () => {
+    // Permission/policy 403s must NOT be classified as auth — the CLI uses
+    // `kind === 'auth'` to decide whether to exit(2) on a misconfigured
+    // token, and this kind of 403 is a permission boundary, not a token
+    // problem.
     const err = classifyError("sig", {
       status: 403,
       message: "Resource not accessible by integration",
       response: { headers: { "x-ratelimit-remaining": "4995" } },
     });
-    expect(err.kind).toBe("auth");
+    expect(err.kind).toBe("unexpected");
+  });
+
+  it("classifies 403 OAuth/SAML policy block as unexpected (not auth)", () => {
+    const err = classifyError("sig", {
+      status: 403,
+      message:
+        "OAuth App access restrictions: ... must be authorized for use in this organization.",
+    });
+    expect(err.kind).toBe("unexpected");
+  });
+
+  it("classifies 403 abuse-detection as rate_limit (not auth)", () => {
+    const err = classifyError("sig", {
+      status: 403,
+      message: "You have triggered an abuse detection mechanism",
+    });
+    expect(err.kind).toBe("rate_limit");
   });
 
   it("classifies 429 as rate_limit", () => {
@@ -151,7 +182,6 @@ describe("GitHubAdapter — error variants surface via collectWithDiagnostics", 
     expect(results).toHaveLength(25);
     const authErrors = errors.filter((e) => e.kind === "auth");
     expect(authErrors.length).toBeGreaterThan(0);
-    expect(adapter.lastErrors).toBe(errors);
   });
 
   it("rate_limit: 403 with x-ratelimit-remaining=0 from git.getTree is classified as rate_limit", async () => {
@@ -210,7 +240,7 @@ describe("GitHubAdapter — error variants surface via collectWithDiagnostics", 
     expect(unexpected[0]?.message).toContain("EAI_AGAIN");
   });
 
-  it("collect() stays interface-compatible and writes lastErrors as a side effect", async () => {
+  it("collect() stays interface-compatible and discards diagnostics", async () => {
     const octokit = makeOctokit();
     (octokit.repos as Record<string, Mock>)["listForOrg"] = vi.fn().mockResolvedValue({
       data: [{ name: "r", full_name: "o/r", default_branch: "main" }],
@@ -223,7 +253,10 @@ describe("GitHubAdapter — error variants surface via collectWithDiagnostics", 
     const results = await adapter.collect();
 
     expect(results).toHaveLength(25);
-    expect(adapter.lastErrors.length).toBeGreaterThan(0);
-    expect(adapter.lastErrors.every((e) => e.kind === "auth")).toBe(true);
+    // Use collectWithDiagnostics() to access typed errors per-call —
+    // there is no shared instance state to inspect after collect().
+    const diag = await adapter.collectWithDiagnostics();
+    expect(diag.errors.length).toBeGreaterThan(0);
+    expect(diag.errors.every((e) => e.kind === "auth")).toBe(true);
   });
 });

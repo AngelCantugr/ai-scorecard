@@ -193,11 +193,26 @@ export async function runAssess(options: AssessOptions): Promise<void> {
   }
 
   // ── Exit code ──────────────────────────────────────────────────────────────
-  // Auth-classified errors mean the token can't read what we tried to scan,
-  // so the resulting scores reflect a misconfigured run, not real org
-  // maturity. Exit 2 (distinct from 1) so CI/wrappers can detect this.
-  const hasAuthErrors = collectorErrors.some((e) => e.kind === "auth");
-  if (hasAuthErrors) {
-    process.exit(2);
+  const code = chooseExitCode(collectorErrors);
+  if (code !== 0) {
+    process.exit(code);
   }
+}
+
+/**
+ * Decide the post-assess exit code based on adapter diagnostics.
+ *
+ * Auth-classified errors mean the token can't read what we tried to scan,
+ * so the resulting scores reflect a misconfigured run, not real org
+ * maturity. Exit 2 (distinct from 1, which we reserve for unexpected
+ * crashes) lets CI / wrappers detect this specifically.
+ *
+ * Other variants (`rate_limit`, `not_found`, `unexpected`) do not force a
+ * non-zero exit — they are surfaced in the diagnostics block and are
+ * expected to be reviewed by the operator without failing the run.
+ *
+ * Exported for unit testing.
+ */
+export function chooseExitCode(errors: readonly CollectorError[]): 0 | 2 {
+  return errors.some((e) => e.kind === "auth") ? 2 : 0;
 }

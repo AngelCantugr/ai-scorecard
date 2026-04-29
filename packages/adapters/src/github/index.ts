@@ -233,17 +233,14 @@ export interface GitHubCollectResult {
  * and Actions.
  *
  * `collect()` returns `SignalResult[]` to satisfy the `Adapter` interface.
- * Use `collectWithDiagnostics()` to also receive the typed `CollectorError[]`
- * surfaced from individual collectors (auth/rate-limit/unexpected). The most
- * recent diagnostics are also retained on `lastErrors` after every call to
- * either method.
+ * To also receive the typed `CollectorError[]` surfaced from individual
+ * collectors (auth/rate-limit/not-found/unexpected), call
+ * `collectWithDiagnostics()` instead — diagnostics are returned per-call
+ * so concurrent invocations cannot stomp each other.
  */
 export class GitHubAdapter implements Adapter {
   readonly name = "github";
   readonly signals: Signal[] = GITHUB_SIGNALS;
-
-  /** Errors recorded during the most recent collect() / collectWithDiagnostics(). */
-  lastErrors: readonly CollectorError[] = [];
 
   private octokit: Octokit | null = null;
   private config: GitHubAdapterConfig | null = null;
@@ -270,7 +267,6 @@ export class GitHubAdapter implements Adapter {
     const repos = await this.fetchRepos();
 
     if (repos.length === 0) {
-      this.lastErrors = [];
       return {
         results: this.signals.map((signal) => ({
           signalId: signal.id,
@@ -463,7 +459,6 @@ export class GitHubAdapter implements Adapter {
       }
     }
 
-    this.lastErrors = errors;
     return { results, errors };
   }
 

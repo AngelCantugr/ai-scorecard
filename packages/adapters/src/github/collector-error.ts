@@ -64,7 +64,8 @@ function readMessage(err: unknown): string {
  * `./index.ts#isRateLimitError` so collectors and the orchestrator agree on
  * what counts as a rate-limit. A 403 only counts as rate-limited when the
  * response carries `x-ratelimit-remaining: 0` or its message mentions a
- * rate/secondary limit; auth-failure 403s fall through to `auth`.
+ * rate/secondary/abuse limit; other 403s fall through to be classified
+ * elsewhere.
  */
 function isRateLimit(err: unknown, status: number | undefined): boolean {
   if (status === 429) return true;
@@ -76,17 +77,44 @@ function isRateLimit(err: unknown, status: number | undefined): boolean {
   };
   const remaining = e.response?.headers?.["x-ratelimit-remaining"];
   if (remaining === "0") return true;
-  if (typeof e.message === "string" && /rate.?limit|secondary rate/i.test(e.message)) return true;
+  if (
+    typeof e.message === "string" &&
+    /rate.?limit|secondary rate|abuse detection/i.test(e.message)
+  )
+    return true;
   return false;
+}
+
+/**
+ * Heuristic check: is a 403 likely a credential failure (vs. a policy /
+ * permission / SAML / OAuth-restriction block)?
+ *
+ * GitHub returns 403 for many non-credential reasons — abuse detection,
+ * SAML enforcement, OAuth App access restrictions, "must have admin
+ * rights", and so on. Treating *all* of those as `auth` would cause the
+ * CLI to `exit(2)` and surface a misleading "broken token" message when
+ * the real problem is a policy or permission boundary.
+ *
+ * Only 403s whose message strongly indicates a credentials problem
+ * (bad/invalid/expired token, missing authentication) are classified as
+ * `auth`. Everything else falls through to `unexpected` so the run is
+ * surfaced as a diagnostic without forcing a non-zero exit.
+ */
+function isCredentialFailure(message: string): boolean {
+  return /bad credentials|invalid (auth )?token|expired token|requires authentication|must authenticate|missing.*token|unauthor/i.test(
+    message
+  );
 }
 
 /**
  * Map an unknown thrown value into a {@link CollectorError} for `signalId`.
  *
  * Classification rules:
- * - 401 → `auth`
- * - 403 (non-rate-limit) → `auth` (token lacks scope/permission)
- * - 429, or 403 with `x-ratelimit-remaining: 0` / rate-limit message → `rate_limit`
+ * - 429, or 403 with `x-ratelimit-remaining: 0` / rate-limit / abuse message → `rate_limit`
+ * - 401 → `auth` (always)
+ * - 403 with credential-flavored message → `auth`
+ * - 403 otherwise (policy / permission / SAML / abuse-non-rate-limit) → `unexpected`
+ *   (so the CLI surfaces it without forcing `exit(2)`)
  * - 404 → `not_found`
  * - everything else → `unexpected`
  */
@@ -104,11 +132,11 @@ export function classifyError(signalId: string, err: unknown): CollectorError {
     };
   }
 
-  if (status === 401 || status === 403) {
+  if (status === 401 || (status === 403 && isCredentialFailure(message))) {
     return {
       kind: "auth",
       signalId,
-      status,
+      status: status ?? 401,
       message,
       cause: err,
     };
