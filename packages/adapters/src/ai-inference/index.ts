@@ -19,6 +19,7 @@ import { buildArchitectureAnalysisPrompt } from "./prompts/architecture-analysis
 import { buildDocumentationAnalysisPrompt } from "./prompts/documentation-analysis.js";
 import { buildGovernanceAnalysisPrompt } from "./prompts/governance-analysis.js";
 import { buildAgentAnalysisPrompt } from "./prompts/agent-analysis.js";
+import { buildEvalAnalysisPrompt } from "./prompts/eval-analysis.js";
 
 /** Default model to use when none is specified */
 const DEFAULT_MODEL = "claude-sonnet-4-6";
@@ -37,6 +38,7 @@ const ANALYSIS_QUESTION_MAP: Record<string, string[]> = {
   documentation: ["D6-Q33", "D6-Q34", "D6-Q35"],
   governance: ["D3-Q15", "D4-Q24", "D5-Q26", "D5-Q27", "D5-Q28", "D5-Q29", "D5-Q30"],
   agent: ["D7-Q36", "D7-Q41"],
+  eval: ["D8-Q43", "D8-Q46", "D8-Q47"],
 };
 
 /** All question IDs handled by the AI inference engine */
@@ -76,6 +78,7 @@ export class AIInferenceEngine {
       this.runBatch("documentation", buildDocumentationAnalysisPrompt(bundle), model, maxTokens),
       this.runBatch("governance", buildGovernanceAnalysisPrompt(bundle), model, maxTokens),
       this.runBatch("agent", buildAgentAnalysisPrompt(bundle), model, maxTokens),
+      this.runBatch("eval", buildEvalAnalysisPrompt(bundle), model, maxTokens),
     ]);
 
     const signalResults: SignalResult[] = [];
