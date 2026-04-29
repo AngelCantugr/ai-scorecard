@@ -178,9 +178,9 @@ interface DimensionsPageProps {
 }
 
 export function DimensionsPage({ result, questions }: DimensionsPageProps) {
-  // Split into two pages — first 3 dims on page 1, last 3 on page 2
-  const firstHalf = result.dimensions.slice(0, 3);
-  const secondHalf = result.dimensions.slice(3);
+  // Split into two pages — first 4 dims on page 1, last 4 on page 2
+  const firstHalf = result.dimensions.slice(0, 4);
+  const secondHalf = result.dimensions.slice(4);
 
   function renderDims(dims: DimensionScore[], startIdx: number) {
     return dims.map((dim, i) => (
@@ -207,7 +207,7 @@ export function DimensionsPage({ result, questions }: DimensionsPageProps) {
         <Text style={styles.pageSub}>
           Per-dimension scores, question-level details, and evidence (2 of 2)
         </Text>
-        {renderDims(secondHalf, 3)}
+        {renderDims(secondHalf, 4)}
       </Page>
     </>
   );
