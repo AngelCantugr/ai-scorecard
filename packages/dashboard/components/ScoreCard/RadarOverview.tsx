@@ -26,7 +26,7 @@ export function RadarOverview({ dimensions }: RadarOverviewProps) {
   return (
     <Card>
       <h2 className="mb-4 text-lg font-semibold text-white">Dimension Overview</h2>
-      <div aria-label="Radar chart showing scores across all 6 dimensions" role="img">
+      <div aria-label="Radar chart showing scores across all 8 dimensions" role="img">
         <ResponsiveContainer width="100%" height={320}>
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
             <PolarGrid stroke="#334155" />

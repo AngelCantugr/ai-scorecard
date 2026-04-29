@@ -158,7 +158,7 @@ export function SummaryPage({ result }: SummaryPageProps) {
   const tierColor = TIER_COLORS[result.tier.level] ?? "#f8fafc";
   const tierDesc =
     TIER_DESCRIPTIONS[result.tier.level] ??
-    "Maturity assessment based on 35 questions across 6 dimensions.";
+    "Maturity assessment based on 47 questions across 8 dimensions.";
 
   const sortedDims = [...result.dimensions].sort((a, b) => b.percentage - a.percentage);
   const strengths = sortedDims.slice(0, 3);
