@@ -31,10 +31,12 @@ export type {
   Tier,
   ScorecardResult,
 } from "./types/index.js";
+export { EvidenceSchema, SignalResultSchema } from "./types/index.js";
 export { dimensions } from "./dimensions.js";
 export { questions } from "./questions.js";
 export { tiers } from "./tiers.js";
 export { computeScorecard } from "./engine.js";
+export { ScoringValidationError } from "./errors.js";
 export {
   getWeakestDimensions,
   getUnaddressedQuestions,
