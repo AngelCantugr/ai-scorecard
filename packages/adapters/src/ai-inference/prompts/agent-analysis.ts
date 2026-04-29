@@ -33,7 +33,6 @@ const RUBRICS = {
 export function buildAgentAnalysisPrompt(bundle: ContentBundle): string {
   // Agent analysis focuses on agent config/instruction files and steering documents.
   const fileList = buildFileList(bundle, (path) => {
-    const lowerPath = path.toLowerCase();
     // Agent instruction/config files in agent directories
     if (
       /^(\.github\/agents?|\.claude\/agents?|agents?)\//i.test(path) &&
@@ -50,7 +49,7 @@ export function buildAgentAnalysisPrompt(bundle: ContentBundle): string {
       return true;
     }
     // AGENTS.md or CLAUDE.md at any directory level
-    if (/\/(claude|agents?)\.md$/i.test(lowerPath)) {
+    if (/\/(claude|agents?)\.md$/i.test(path)) {
       return true;
     }
     return false;
@@ -114,7 +113,7 @@ function buildCommitHistoryContext(bundle: ContentBundle): string {
     if (typeof commit === "object" && commit !== null) {
       const c = commit as Record<string, unknown>;
       const sha = typeof c["sha"] === "string" ? c["sha"].slice(0, 7) : "unknown";
-      const message = typeof c["message"] === "string" ? c["message"].split("\n")[0] ?? "" : "";
+      const message = typeof c["message"] === "string" ? c["message"].split("\n")[0] : "";
       const author = typeof c["author"] === "string" ? c["author"] : "";
       const date = typeof c["date"] === "string" ? c["date"].slice(0, 10) : "";
       lines.push(`- ${sha} (${date}) [${author}]: ${message}`);
