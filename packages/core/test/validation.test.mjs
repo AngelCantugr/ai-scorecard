@@ -116,9 +116,7 @@ test("computeScorecard accepts valid input (regression: validation does not brea
       signalId: "sig-ok",
       questionId: "D1-Q1",
       score: 2,
-      evidence: [
-        { source: "github:repos", data: { count: 3 }, summary: "Three repos found" },
-      ],
+      evidence: [{ source: "github:repos", data: { count: 3 }, summary: "Three repos found" }],
       confidence: 1,
     },
   ];

@@ -17,8 +17,7 @@ export class ScoringValidationError extends Error {
         return `${path}: ${issue.message}`;
       })
       .join("; ");
-    const overflow =
-      zodError.issues.length > 5 ? ` (+${zodError.issues.length - 5} more)` : "";
+    const overflow = zodError.issues.length > 5 ? ` (+${zodError.issues.length - 5} more)` : "";
     super(`${prefix}: ${summary}${overflow}`);
     this.name = "ScoringValidationError";
     this.issues = zodError.issues;
