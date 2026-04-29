@@ -39,7 +39,7 @@ function makeResult(questionId, score = 1) {
 // Tests
 // ---------------------------------------------------------------------------
 
-test("AI_INFERENCE_QUESTION_IDS exports the correct 19 question IDs", () => {
+test("AI_INFERENCE_QUESTION_IDS exports the correct 21 question IDs", () => {
   const expected = [
     "D4-Q22",
     "D1-Q2",
@@ -60,6 +60,8 @@ test("AI_INFERENCE_QUESTION_IDS exports the correct 19 question IDs", () => {
     "D5-Q28",
     "D5-Q29",
     "D5-Q30",
+    "D7-Q36",
+    "D7-Q41",
   ];
   assert.deepEqual(
     new Set(AI_INFERENCE_QUESTION_IDS),
@@ -130,9 +132,13 @@ test("analyze returns SignalResult for each question when LLM responds correctly
     makeResult("D5-Q29"),
     makeResult("D5-Q30"),
   ];
+  const agentResults = [
+    makeResult("D7-Q36"),
+    makeResult("D7-Q41"),
+  ];
 
   let callCount = 0;
-  const batchResponses = [policyResults, archResults, docResults, govResults];
+  const batchResponses = [policyResults, archResults, docResults, govResults, agentResults];
 
   const engine = new AIInferenceEngine({
     provider: "anthropic",
@@ -152,8 +158,8 @@ test("analyze returns SignalResult for each question when LLM responds correctly
 
   const results = await engine.analyze(makeBundle("test-repo"));
 
-  assert.equal(results.length, 19, "Should return one SignalResult per question");
-  assert.equal(callCount, 4, "Should make exactly 4 LLM calls (one per batch)");
+  assert.equal(results.length, 21, "Should return one SignalResult per question");
+  assert.equal(callCount, 5, "Should make exactly 5 LLM calls (one per batch)");
 
   // Check a specific result
   const q22 = results.find((r) => r.questionId === "D4-Q22");
@@ -191,9 +197,13 @@ test("analyze fills in missing questions with zero-confidence fallback", async (
     makeResult("D5-Q29"),
     makeResult("D5-Q30"),
   ];
+  const agentResults = [
+    makeResult("D7-Q36"),
+    makeResult("D7-Q41"),
+  ];
 
   let callCount = 0;
-  const batchResponses = [partialPolicyResults, archResults, docResults, govResults];
+  const batchResponses = [partialPolicyResults, archResults, docResults, govResults, agentResults];
 
   const engine = new AIInferenceEngine({
     provider: "anthropic",
@@ -236,8 +246,8 @@ test("analyze gracefully handles LLM API error", async () => {
 
   const results = await engine.analyze(makeBundle("test-repo"));
 
-  // All 19 questions should have fallback zero-confidence results
-  assert.equal(results.length, 19);
+  // All 21 questions should have fallback zero-confidence results
+  assert.equal(results.length, 21);
   for (const result of results) {
     assert.equal(result.score, 0);
     assert.equal(result.confidence, 0);
@@ -261,7 +271,7 @@ test("analyze gracefully handles malformed JSON from LLM", async () => {
 
   const results = await engine.analyze(makeBundle("test-repo"));
 
-  assert.equal(results.length, 19);
+  assert.equal(results.length, 21);
   for (const result of results) {
     assert.equal(result.score, 0);
     assert.equal(result.confidence, 0);
@@ -405,14 +415,14 @@ test("analyze parses JSON array when LLM includes brackets in preamble text", as
 // Finding #3 — error flag set on batch failure
 // ---------------------------------------------------------------------------
 
-test("analyze still returns 19 results when all batches fail, with confidence 0", async () => {
+test("analyze still returns 21 results when all batches fail, with confidence 0", async () => {
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
     messages: { create: async () => { throw new Error("API unavailable"); } },
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
-  assert.equal(results.length, 19);
+  assert.equal(results.length, 21);
   for (const r of results) {
     assert.equal(r.confidence, 0, `${r.questionId} should have confidence 0 on batch failure`);
   }
@@ -431,7 +441,7 @@ test("confidence:0 sentinel is preserved through toSignalResult for missing ques
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
-  assert.equal(results.length, 19);
+  assert.equal(results.length, 21);
   for (const r of results) {
     // confidence 0 is the sentinel; it must not be clamped to 0.3
     assert.equal(r.confidence, 0, `${r.questionId} sentinel should stay 0, not be clamped to 0.3`);
@@ -552,4 +562,130 @@ test("SignalResult evidence contains reasoning and evidence_summary", async () =
   assert.deepEqual(q22.evidence[0].data, {
     reasoning: "Found AI_POLICY.md with onboarding reference",
   });
+});
+
+// ---------------------------------------------------------------------------
+// D7 Agent Maturity — agent-analysis fixtures
+// ---------------------------------------------------------------------------
+
+test("agent analysis: positive case — mature agent definitions with scope and iteration history", async () => {
+  // Positive fixture: agent files with explicit permissions + commit history showing iteration
+  const agentResults = [
+    {
+      questionId: "D7-Q36",
+      score: 2,
+      confidence: 0.65,
+      reasoning:
+        "Agent instruction files contain explicit allowedTools lists and permission boundaries. All agent definitions found include least-privilege tool restrictions and sandboxing configs.",
+      evidence_summary:
+        ".github/agents/coder.md defines allowedTools: [Read, Write, Bash] with no network access; .claude/agents/reviewer.md scopes permissions to read-only operations.",
+    },
+    {
+      questionId: "D7-Q41",
+      score: 2,
+      confidence: 0.55,
+      reasoning:
+        "Commit history shows 8 iterative updates to agent instruction files over 3 months, with messages referencing agent failure fixes and prompt refinements. Changes went through PR review.",
+      evidence_summary:
+        "8 commits on agent instruction files; messages include 'fix: agent loop on ambiguous input', 'improve: tighten coder agent scope after prod incident', 'refine: add clarifying constraints from retro'.",
+    },
+  ];
+
+  const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
+  engine["client"] = {
+    messages: {
+      create: async () => ({
+        content: [{ type: "text", text: JSON.stringify(agentResults) }],
+        usage: { input_tokens: 200, output_tokens: 80 },
+      }),
+    },
+  };
+
+  // Bundle with agent files and commit history metadata
+  const bundle = makeBundle("mature-org/agents-repo", [
+    {
+      path: ".github/agents/coder.md",
+      content:
+        "# Coder Agent\n\nallowedTools: [Read, Write, Bash]\npermissions: no-network\nboundaries: workspace only",
+    },
+    {
+      path: ".claude/agents/reviewer.md",
+      content: "# Reviewer Agent\n\nallowedTools: [Read]\npermissions: read-only",
+    },
+  ]);
+  bundle.metadata = {
+    agentInstructionCommits: [
+      { sha: "abc1234", date: "2024-11-15", author: "alice", message: "fix: agent loop on ambiguous input" },
+      { sha: "def5678", date: "2024-10-30", author: "bob", message: "improve: tighten coder agent scope after prod incident" },
+      { sha: "ghi9012", date: "2024-10-10", author: "alice", message: "refine: add clarifying constraints from retro" },
+    ],
+  };
+
+  const results = await engine.analyze(bundle);
+
+  const q36 = results.find((r) => r.questionId === "D7-Q36");
+  assert.ok(q36, "Should produce a result for D7-Q36");
+  assert.equal(q36.score, 2, "Q36 should score 2 for comprehensive scope definitions");
+  assert.equal(q36.confidence, 0.65, "Q36 confidence should be clamped to 0.65");
+  assert.equal(q36.signalId, "ai-inference:D7-Q36");
+  assert.equal(q36.evidence[0].source, "ai-inference");
+
+  const q41 = results.find((r) => r.questionId === "D7-Q41");
+  assert.ok(q41, "Should produce a result for D7-Q41");
+  assert.equal(q41.score, 2, "Q41 should score 2 for mature instruction versioning with iteration");
+  assert.equal(q41.confidence, 0.55, "Q41 confidence should be clamped to 0.55");
+  assert.equal(q41.signalId, "ai-inference:D7-Q41");
+});
+
+test("agent analysis: negative case — no agent files, no instruction history", async () => {
+  // Negative fixture: no agent files, no scope definitions, no iteration evidence
+  const agentResults = [
+    {
+      questionId: "D7-Q36",
+      score: 0,
+      confidence: 0.6,
+      reasoning:
+        "No agent configuration files found in expected directories. No evidence of formal scope or permission definitions for any AI agents.",
+      evidence_summary:
+        "No files found in .github/agents/, .claude/agents/, or agents/. No allowedTools, permissions, or scope definitions detected.",
+    },
+    {
+      questionId: "D7-Q41",
+      score: 0,
+      confidence: 0.4,
+      reasoning:
+        "No agent instruction files found in version control. No commit history on prompt or instruction files is available. Cannot determine whether instructions are versioned or reviewed.",
+      evidence_summary:
+        "No agent instruction files in repository. No commit history provided for analysis.",
+    },
+  ];
+
+  const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
+  engine["client"] = {
+    messages: {
+      create: async () => ({
+        content: [{ type: "text", text: JSON.stringify(agentResults) }],
+        usage: { input_tokens: 50, output_tokens: 40 },
+      }),
+    },
+  };
+
+  // Bundle with no agent files and no commit history
+  const bundle = makeBundle("nascent-org/app-repo", [
+    { path: "README.md", content: "# My App" },
+    { path: "src/index.ts", content: "export const main = () => {};" },
+  ]);
+
+  const results = await engine.analyze(bundle);
+
+  const q36 = results.find((r) => r.questionId === "D7-Q36");
+  assert.ok(q36, "Should produce a result for D7-Q36 even with no agent files");
+  assert.equal(q36.score, 0, "Q36 should score 0 when no scope definitions exist");
+  assert.equal(q36.confidence, 0.6, "Q36 confidence should be clamped within range");
+
+  const q41 = results.find((r) => r.questionId === "D7-Q41");
+  assert.ok(q41, "Should produce a result for D7-Q41 even with no instruction files");
+  assert.equal(q41.score, 0, "Q41 should score 0 when no instruction files or history exist");
+  // 0.4 is at the boundary — verify it stays at 0.4 (above the 0.3 floor)
+  assert.equal(q41.confidence, 0.4, "Q41 confidence 0.4 is above floor and should not be clamped up");
 });
