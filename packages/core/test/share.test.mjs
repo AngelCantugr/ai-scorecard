@@ -56,7 +56,7 @@ test("round-trip: all twos (perfect score) encodes and decodes correctly", () =>
   const encoded = encodeResults(original);
   const decoded = decodeResults(encoded);
 
-  assert.equal(decoded.totalScore, 70);
+  assert.equal(decoded.totalScore, 94);
   assert.equal(decoded.tier.label, "AI-Native");
 
   for (const dim of decoded.dimensions) {

@@ -83,9 +83,10 @@ pnpm --filter @ai-scorecard/dashboard dev
 
 ## Scoring Model
 
-- **35 questions** across **6 dimensions** (Platform, Developer Tooling, AI Governance,
-  Code Quality, Security, Culture)
-- **0–1–2 scale** per question; max **70 points**
+- **47 questions** across **8 dimensions** (Platform, Developer Tooling, CI/CD & Velocity,
+  Governance & Security, Observability & Cost, Documentation & Context Engineering,
+  Agent Maturity, Eval Quality)
+- **0–1–2 scale** per question; max **94 points**
 - Each score requires **evidence** (data from adapters) + **confidence level**
 - See `SPEC.md` for full dimension/question definitions
 

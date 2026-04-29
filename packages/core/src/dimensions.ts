@@ -37,4 +37,16 @@ export const dimensions: Dimension[] = [
     questionCount: 5,
     maxScore: 10,
   },
+  {
+    id: "agent-maturity",
+    name: "Agent Maturity",
+    questionCount: 6,
+    maxScore: 12,
+  },
+  {
+    id: "eval-quality",
+    name: "Eval Quality",
+    questionCount: 6,
+    maxScore: 12,
+  },
 ];
