@@ -63,7 +63,7 @@ describe("collectAgentScopeSignal", () => {
       ".github/agents/coder.md": 'allowedTools: ["read_file", "write_file"]',
     });
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q36-agent-scope");
     expect(result.questionId).toBe("D7-Q36");
@@ -78,7 +78,7 @@ describe("collectAgentScopeSignal", () => {
       ".github/agents/coder.md": "# My Agent\nDo some stuff.",
     });
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("no explicit scope definitions");
@@ -88,7 +88,7 @@ describe("collectAgentScopeSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "package.json"]);
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No agent directories found");
@@ -100,7 +100,7 @@ describe("collectAgentScopeSignal", () => {
       ".claude/agents/assistant.json": "",
     });
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(() => result.score).not.toThrow();
     expect([0, 1, 2]).toContain(result.score);
@@ -113,7 +113,7 @@ describe("collectAgentScopeSignal", () => {
       "agents/bot.yaml": "permissions:\n  read: true\n  write: false",
     });
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -124,7 +124,7 @@ describe("collectAgentScopeSignal", () => {
       ".devcontainer/devcontainer.json": '{"sandboxed": true, "allowedTools": ["bash"]}',
     });
 
-    const result = await collectAgentScopeSignal(octokit as never, [repo]);
+    const { result } = await collectAgentScopeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -141,7 +141,7 @@ describe("collectStructuredOutputsSignal", () => {
       ".github/agents/extractor.md": 'outputSchema: { type: "object", properties: {} }',
     });
 
-    const result = await collectStructuredOutputsSignal(octokit as never, repos);
+    const { result } = await collectStructuredOutputsSignal(octokit as never, repos);
 
     expect(result.signalId).toBe("github:repo-scan:q37-structured-outputs");
     expect(result.questionId).toBe("D7-Q37");
@@ -156,7 +156,7 @@ describe("collectStructuredOutputsSignal", () => {
       ".github/agents/extractor.md": "response_format: json_object",
     });
 
-    const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
+    const { result } = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("Output schema definitions found");
@@ -166,7 +166,7 @@ describe("collectStructuredOutputsSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "README.md"]);
 
-    const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
+    const { result } = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No output schema definitions");
@@ -178,7 +178,7 @@ describe("collectStructuredOutputsSignal", () => {
       ".github/agents/processor.ts": 'import { z } from "zod";\nconst schema = z.object({});',
     });
 
-    const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
+    const { result } = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -188,7 +188,7 @@ describe("collectStructuredOutputsSignal", () => {
     const octokit = makeOctokit([".github/agents/broken.json"], {});
     // getContent will reject with 404 since path not in contentMap
 
-    const result = await collectStructuredOutputsSignal(octokit as never, [repo]);
+    const { result } = await collectStructuredOutputsSignal(octokit as never, [repo]);
 
     expect(() => result.score).not.toThrow();
     expect([0, 1, 2]).toContain(result.score);
@@ -205,7 +205,7 @@ describe("collectComposableWorkflowsSignal", () => {
     const repos = [makeRepo("repo-a"), makeRepo("repo-b")];
     const octokit = makeOctokit([".github/workflows/copilot-setup-steps.yml", ".mcp.json"]);
 
-    const result = await collectComposableWorkflowsSignal(octokit as never, repos);
+    const { result } = await collectComposableWorkflowsSignal(octokit as never, repos);
 
     expect(result.signalId).toBe("github:repo-scan:q38-composable-workflows");
     expect(result.questionId).toBe("D7-Q38");
@@ -218,7 +218,7 @@ describe("collectComposableWorkflowsSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["agents.yaml", "src/index.ts"]);
 
-    const result = await collectComposableWorkflowsSignal(octokit as never, [repo]);
+    const { result } = await collectComposableWorkflowsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("Composable workflow signals found");
@@ -228,7 +228,7 @@ describe("collectComposableWorkflowsSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "package.json", "README.md"]);
 
-    const result = await collectComposableWorkflowsSignal(octokit as never, [repo]);
+    const { result } = await collectComposableWorkflowsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No workflow composition evidence");
@@ -238,7 +238,7 @@ describe("collectComposableWorkflowsSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["mcp-config.json", "src/app.ts"]);
 
-    const result = await collectComposableWorkflowsSignal(octokit as never, [repo]);
+    const { result } = await collectComposableWorkflowsSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -254,7 +254,7 @@ describe("collectComposableWorkflowsSignal", () => {
       },
     };
 
-    const result = await collectComposableWorkflowsSignal(octokit as never, [repo]);
+    const { result } = await collectComposableWorkflowsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence.length).toBeGreaterThan(0);
@@ -276,7 +276,7 @@ describe("collectSessionLoggingSignal", () => {
       ".github/hooks/tools.json": hookContent,
     });
 
-    const result = await collectSessionLoggingSignal(octokit as never, [repo]);
+    const { result } = await collectSessionLoggingSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q39-session-logging");
     expect(result.questionId).toBe("D7-Q39");
@@ -291,7 +291,7 @@ describe("collectSessionLoggingSignal", () => {
       ".github/hooks/basic.json": '{"version": 1}',
     });
 
-    const result = await collectSessionLoggingSignal(octokit as never, [repo]);
+    const { result } = await collectSessionLoggingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("no preToolUse/postToolUse");
@@ -301,7 +301,7 @@ describe("collectSessionLoggingSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "README.md"]);
 
-    const result = await collectSessionLoggingSignal(octokit as never, [repo]);
+    const { result } = await collectSessionLoggingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No hook/logging configs");
@@ -313,7 +313,7 @@ describe("collectSessionLoggingSignal", () => {
       ".claude/agents/assistant.md": "hooks:\n  logging: true\n  sessionLog: /var/log/session",
     });
 
-    const result = await collectSessionLoggingSignal(octokit as never, [repo]);
+    const { result } = await collectSessionLoggingSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -324,7 +324,7 @@ describe("collectSessionLoggingSignal", () => {
       ".claude/hooks/broken.json": "this is not json {{{{",
     });
 
-    const result = await collectSessionLoggingSignal(octokit as never, [repo]);
+    const { result } = await collectSessionLoggingSignal(octokit as never, [repo]);
 
     // Should not throw; broken content still has a hook file present → score 1
     expect([0, 1, 2]).toContain(result.score);
@@ -351,7 +351,7 @@ describe("collectHumanOversightSignal", () => {
       ".github/hooks/approval.json": hookContent,
     });
 
-    const result = await collectHumanOversightSignal(octokit as never, [repo]);
+    const { result } = await collectHumanOversightSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q40-human-oversight");
     expect(result.questionId).toBe("D7-Q40");
@@ -375,7 +375,7 @@ jobs:
       ".github/workflows/deploy.yml": workflowContent,
     });
 
-    const result = await collectHumanOversightSignal(octokit as never, [repo]);
+    const { result } = await collectHumanOversightSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -389,7 +389,7 @@ jobs:
       ".github/hooks/post.json": hookContent,
     });
 
-    const result = await collectHumanOversightSignal(octokit as never, [repo]);
+    const { result } = await collectHumanOversightSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -400,7 +400,7 @@ jobs:
       ".github/workflows/ci.yml": "name: CI\njobs:\n  test:\n    runs-on: ubuntu-latest",
     });
 
-    const result = await collectHumanOversightSignal(octokit as never, [repo]);
+    const { result } = await collectHumanOversightSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No approval gates");
@@ -411,7 +411,7 @@ jobs:
     // Hook file in tree but getContent returns 404
     const octokit = makeOctokit([".github/hooks/missing.json"]);
 
-    const result = await collectHumanOversightSignal(octokit as never, [repo]);
+    const { result } = await collectHumanOversightSignal(octokit as never, [repo]);
 
     expect([0, 1, 2]).toContain(result.score);
     expect(result.evidence.length).toBeGreaterThan(0);
@@ -455,7 +455,7 @@ describe("collectVersionedInstructionsSignal", () => {
       },
     };
 
-    const result = await collectVersionedInstructionsSignal(octokit as never, [repo]);
+    const { result } = await collectVersionedInstructionsSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q41-versioned-instructions");
     expect(result.questionId).toBe("D7-Q41");
@@ -482,7 +482,7 @@ describe("collectVersionedInstructionsSignal", () => {
       },
     };
 
-    const result = await collectVersionedInstructionsSignal(octokit as never, [repo]);
+    const { result } = await collectVersionedInstructionsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("no PR review evidence");
@@ -492,7 +492,7 @@ describe("collectVersionedInstructionsSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "README.md"]);
 
-    const result = await collectVersionedInstructionsSignal(octokit as never, [repo]);
+    const { result } = await collectVersionedInstructionsSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No agent instruction files found");
@@ -515,7 +515,7 @@ describe("collectVersionedInstructionsSignal", () => {
       },
     };
 
-    const result = await collectVersionedInstructionsSignal(octokit as never, [repo]);
+    const { result } = await collectVersionedInstructionsSignal(octokit as never, [repo]);
 
     // File exists but PR lookup failed → should still score 1 (not throw)
     expect([0, 1]).toContain(result.score);
@@ -551,7 +551,7 @@ describe("collectVersionedInstructionsSignal", () => {
       },
     };
 
-    const result = await collectVersionedInstructionsSignal(octokit as never, [repo]);
+    const { result } = await collectVersionedInstructionsSignal(octokit as never, [repo]);
 
     // Old PR is outside the window, so score is 1 (file exists, no recent review)
     expect(result.score).toBe(1);

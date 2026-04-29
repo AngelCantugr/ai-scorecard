@@ -14,3 +14,12 @@ export type {
 } from "./ai-inference/types.js";
 export { GitHubAdapter } from "./github/index.js";
 export type { GitHubAdapterConfig } from "./github/config.js";
+export type { GitHubCollectResult } from "./github/index.js";
+export type {
+  CollectorError,
+  CollectorErrorKind,
+  CollectorAuthError,
+  CollectorRateLimitError,
+  CollectorNotFoundError,
+  CollectorUnexpectedError,
+} from "./github/collector-error.js";

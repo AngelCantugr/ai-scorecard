@@ -74,7 +74,7 @@ jobs:
       ".github/workflows/eval.yml": workflowContent,
     });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:eval:q42-eval-framework");
     expect(result.questionId).toBe("D8-Q42");
@@ -92,7 +92,7 @@ jobs:
 
     const octokit = makeOctokit(["package.json"], { "package.json": packageJson });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("no CI eval integration");
@@ -104,7 +104,7 @@ jobs:
 
     const octokit = makeOctokit(["package.json"], { "package.json": packageJson });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No eval framework");
@@ -118,7 +118,7 @@ jobs:
 
     const octokit = makeOctokit(["package.json"], { "package.json": packageJson });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
     expect(result.evidence[0]?.data).toMatchObject({
@@ -135,7 +135,7 @@ arize-phoenix = "^3.0.0"
 
     const octokit = makeOctokit(["pyproject.toml"], { "pyproject.toml": pyproject });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -148,7 +148,7 @@ arize-phoenix = "^3.0.0"
       "requirements.txt": requirements,
     });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -171,7 +171,7 @@ jobs:
       ".github/workflows/promptfoo.yml": workflowContent,
     });
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -180,7 +180,7 @@ jobs:
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts"]);
 
-    const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
+    const { result } = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
     expect([0, 1, 2]).toContain(result.score);
     expect(result.evidence.length).toBeGreaterThan(0);
@@ -196,7 +196,7 @@ describe("collectEvalDatasetSignal", () => {
     const repos = [makeRepo("repo-a"), makeRepo("repo-b")];
     const octokit = makeOctokit(["evals/sample.json", "evals/edge-cases.json"]);
 
-    const result = await collectEvalDatasetSignal(octokit as never, repos);
+    const { result } = await collectEvalDatasetSignal(octokit as never, repos);
 
     expect(result.signalId).toBe("github:eval:q44-eval-datasets");
     expect(result.questionId).toBe("D8-Q44");
@@ -210,7 +210,7 @@ describe("collectEvalDatasetSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["golden/test1.json", "golden/test2.json"]);
 
-    const result = await collectEvalDatasetSignal(octokit as never, [repo]);
+    const { result } = await collectEvalDatasetSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("Eval dataset directories");
@@ -220,7 +220,7 @@ describe("collectEvalDatasetSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["src/index.ts", "tests/unit.test.ts"]);
 
-    const result = await collectEvalDatasetSignal(octokit as never, [repo]);
+    const { result } = await collectEvalDatasetSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No eval dataset directories");
@@ -230,7 +230,7 @@ describe("collectEvalDatasetSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["tests/eval/fixture1.json", "tests/eval/fixture2.json"]);
 
-    const result = await collectEvalDatasetSignal(octokit as never, [repo]);
+    const { result } = await collectEvalDatasetSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -239,7 +239,7 @@ describe("collectEvalDatasetSignal", () => {
     const repo = makeRepo();
     const octokit = makeOctokit(["goldens/qa_pairs.jsonl"]);
 
-    const result = await collectEvalDatasetSignal(octokit as never, [repo]);
+    const { result } = await collectEvalDatasetSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -254,7 +254,7 @@ describe("collectEvalDatasetSignal", () => {
       },
     };
 
-    const result = await collectEvalDatasetSignal(octokit as never, [repo]);
+    const { result } = await collectEvalDatasetSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence.length).toBeGreaterThan(0);
@@ -281,7 +281,7 @@ jobs:
       { contexts: ["benchmark / run", "ci / test"] }
     );
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:eval:q45-benchmark-suite");
     expect(result.questionId).toBe("D8-Q45");
@@ -305,7 +305,7 @@ jobs:
       { contexts: ["ci / lint"] } // no eval check
     );
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.summary).toContain("not enforced as branch-protection gates");
@@ -319,7 +319,7 @@ jobs:
       null
     );
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No benchmark or eval CI steps");
@@ -340,7 +340,7 @@ jobs:
       null
     );
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     expect(result.score).toBeGreaterThanOrEqual(1);
   });
@@ -360,7 +360,7 @@ jobs:
       { contexts: ["quality-gate / evals"] }
     );
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -395,7 +395,7 @@ jobs:
       },
     };
 
-    const result = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
+    const { result } = await collectBenchmarkSuiteSignal(octokit as never, [repo]);
 
     // CI step found (score 1); branch protection check failed gracefully
     expect(result.score).toBe(1);
