@@ -159,8 +159,7 @@ const GITHUB_SIGNALS: Signal[] = [
   {
     id: "github:eval:q44-eval-datasets",
     questionId: "D8-Q44",
-    description:
-      "Scan repos for eval dataset directories (evals/, eval/, golden/, etc.)",
+    description: "Scan repos for eval dataset directories (evals/, eval/, golden/, etc.)",
   },
   {
     id: "github:eval:q45-benchmark-suite",

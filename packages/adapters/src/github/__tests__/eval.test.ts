@@ -43,9 +43,7 @@ function makeOctokit(
       }),
       getBranch: vi.fn().mockResolvedValue({
         data: {
-          protection: branchProtection
-            ? { required_status_checks: branchProtection }
-            : undefined,
+          protection: branchProtection ? { required_status_checks: branchProtection } : undefined,
         },
       }),
     },
@@ -71,13 +69,10 @@ jobs:
       dependencies: { deepeval: "^0.20.0" },
     });
 
-    const octokit = makeOctokit(
-      ["package.json", ".github/workflows/eval.yml"],
-      {
-        "package.json": packageJson,
-        ".github/workflows/eval.yml": workflowContent,
-      }
-    );
+    const octokit = makeOctokit(["package.json", ".github/workflows/eval.yml"], {
+      "package.json": packageJson,
+      ".github/workflows/eval.yml": workflowContent,
+    });
 
     const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
@@ -171,13 +166,10 @@ jobs:
       devDependencies: { promptfoo: "^0.50.0" },
     });
 
-    const octokit = makeOctokit(
-      ["package.json", ".github/workflows/promptfoo.yml"],
-      {
-        "package.json": packageJson,
-        ".github/workflows/promptfoo.yml": workflowContent,
-      }
-    );
+    const octokit = makeOctokit(["package.json", ".github/workflows/promptfoo.yml"], {
+      "package.json": packageJson,
+      ".github/workflows/promptfoo.yml": workflowContent,
+    });
 
     const result = await collectEvalFrameworkSignal(octokit as never, [repo]);
 
@@ -202,10 +194,7 @@ jobs:
 describe("collectEvalDatasetSignal", () => {
   it("scores 2 when eval dataset dirs found in 2+ repos", async () => {
     const repos = [makeRepo("repo-a"), makeRepo("repo-b")];
-    const octokit = makeOctokit([
-      "evals/sample.json",
-      "evals/edge-cases.json",
-    ]);
+    const octokit = makeOctokit(["evals/sample.json", "evals/edge-cases.json"]);
 
     const result = await collectEvalDatasetSignal(octokit as never, repos);
 

@@ -317,8 +317,7 @@ export async function collectBenchmarkSuiteSignal(
         branch: repo.defaultBranch,
       });
 
-      const requiredChecks =
-        branch.protection?.required_status_checks?.contexts ?? [];
+      const requiredChecks = branch.protection?.required_status_checks?.contexts ?? [];
 
       const hasEvalCheck = requiredChecks.some((check: string) =>
         /eval|benchmark|quality-gate/i.test(check)
