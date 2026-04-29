@@ -85,9 +85,9 @@ describe("GitHubAdapter", () => {
       expect(adapter.name).toBe("github");
     });
 
-    it("exposes 22 signals", () => {
+    it("exposes 25 signals", () => {
       const adapter = new GitHubAdapter();
-      expect(adapter.signals).toHaveLength(22);
+      expect(adapter.signals).toHaveLength(25);
     });
 
     it("all signals have unique IDs", () => {
@@ -117,7 +117,7 @@ describe("GitHubAdapter", () => {
 
       const results = await adapter.collect();
 
-      expect(results).toHaveLength(22);
+      expect(results).toHaveLength(25);
       for (const result of results) {
         expect(result.score).toBe(0);
         expect(result.confidence).toBe(1.0);
@@ -431,7 +431,7 @@ describe("GitHubAdapter", () => {
       const adapter = await createConnectedAdapter(octokit);
       // Should not throw — retries on 429
       const results = await adapter.collect();
-      expect(results).toHaveLength(22);
+      expect(results).toHaveLength(25);
       // Verify that a retry actually occurred (not just the empty-org fallback)
       expect(callCount).toBeGreaterThan(1);
     });
@@ -570,7 +570,7 @@ describe("GitHubAdapter", () => {
       const results = await adapter.collect();
 
       // Output must always have exactly 22 entries
-      expect(results).toHaveLength(22);
+      expect(results).toHaveLength(25);
 
       // Any failed collector should produce confidence:0 and score:0
       const failedResults = results.filter((r) => r.confidence === 0);
