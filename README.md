@@ -45,15 +45,15 @@ read-only token, and get a structured report in seconds.
 Your score is built from **47 questions** across **8 dimensions** (max 2 points each,
 94 points total). Each question is backed by evidence extracted from your repos.
 
-| #   | Dimension                               | Questions | Max Points | What It Measures                                                                                                              |
-| --- | --------------------------------------- | :-------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Platform & Infrastructure**           |     6     |     12     | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene                                     |
-| 2   | **Developer Tooling & Adoption**        |     7     |     14     | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage              |
-| 3   | **CI/CD & Velocity**                    |     6     |     12     | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time |
-| 4   | **Governance & Security**               |     5     |     10     | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process                           |
-| 5   | **Observability & Cost**                |     6     |     12     | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics                         |
-| 6   | **Documentation & Context Engineering** |     5     |     10     | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs                     |
-| 7   | **Agent Maturity**                      |     6     |     12     | Agent scoping and permissions, structured outputs, composable workflows, session tracing, human-in-the-loop, instruction SDLC |
+| #   | Dimension                               | Questions | Max Points | What It Measures                                                                                                                |
+| --- | --------------------------------------- | :-------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Platform & Infrastructure**           |     6     |     12     | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene                                       |
+| 2   | **Developer Tooling & Adoption**        |     7     |     14     | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage                |
+| 3   | **CI/CD & Velocity**                    |     6     |     12     | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time   |
+| 4   | **Governance & Security**               |     5     |     10     | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process                             |
+| 5   | **Observability & Cost**                |     6     |     12     | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics                           |
+| 6   | **Documentation & Context Engineering** |     5     |     10     | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs                       |
+| 7   | **Agent Maturity**                      |     6     |     12     | Agent scoping and permissions, structured outputs, composable workflows, session tracing, human-in-the-loop, instruction SDLC   |
 | 8   | **Eval Quality**                        |     6     |     12     | Automated eval frameworks, CI-gated evals, versioned datasets, benchmark suites, business-outcome metrics, regression detection |
 
 See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidence sources.
