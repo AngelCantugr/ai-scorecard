@@ -81,9 +81,7 @@ export function encodeResults(result: ScorecardResult): string {
   const encodedScores = encodeScores(scores);
 
   const assessedAt =
-    result.assessedAt instanceof Date
-      ? result.assessedAt.toISOString()
-      : String(result.assessedAt);
+    result.assessedAt instanceof Date ? result.assessedAt.toISOString() : String(result.assessedAt);
 
   const parts: string[] = [
     `${PARAM_SCORES}=${encodeURIComponent(encodedScores)}`,
@@ -158,9 +156,5 @@ export function decodeResults(encoded: string): ScorecardResult {
     confidence: 0,
   }));
 
-  return computeScorecard(
-    signals,
-    { adapterName: adapterParam, target: orgParam },
-    assessedAt
-  );
+  return computeScorecard(signals, { adapterName: adapterParam, target: orgParam }, assessedAt);
 }

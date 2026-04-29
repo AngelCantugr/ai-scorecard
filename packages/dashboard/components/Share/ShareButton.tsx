@@ -33,7 +33,13 @@ export function ShareButton({ encodedQuery }: ShareButtonProps) {
 
   return (
     <div className="relative inline-flex flex-col items-end gap-1">
-      <Button variant="secondary" size="sm" onClick={() => { void handleShare(); }}>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => {
+          void handleShare();
+        }}
+      >
         🔗 {copied ? "Copied!" : "Share Results"}
       </Button>
       {copied && (

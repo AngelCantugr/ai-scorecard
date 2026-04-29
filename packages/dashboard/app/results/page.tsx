@@ -96,12 +96,7 @@ function ResultsPageContent() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      {isShared && (
-        <SharedBanner
-          org={result.metadata.target}
-          date={result.assessedAt}
-        />
-      )}
+      {isShared && <SharedBanner org={result.metadata.target} date={result.assessedAt} />}
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
