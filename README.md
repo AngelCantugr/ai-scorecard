@@ -32,7 +32,7 @@ GitHub Repos + Actions + Settings
    AI Inference (optional) ← LLM fills gaps that can't be measured directly
          │
          ▼
-   Scorecard Report        ← 0–70 score, tier, dimension breakdown, top gaps
+   Scorecard Report        ← 0–94 score, tier, dimension breakdown, top gaps
 ```
 
 The tool runs entirely from the command line. Point it at a GitHub org, hand it a
@@ -40,19 +40,21 @@ read-only token, and get a structured report in seconds.
 
 ---
 
-## The 6 Dimensions
+## The 8 Dimensions
 
-Your score is built from **35 questions** across **6 dimensions** (max 2 points each,
-70 points total). Each question is backed by evidence extracted from your repos.
+Your score is built from **47 questions** across **8 dimensions** (max 2 points each,
+94 points total). Each question is backed by evidence extracted from your repos.
 
-| #   | Dimension                               | Questions | Max Points | What It Measures                                                                                                              |
-| --- | --------------------------------------- | :-------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Platform & Infrastructure**           |     6     |     12     | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene                                     |
-| 2   | **Developer Tooling & Adoption**        |     7     |     14     | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage              |
-| 3   | **CI/CD & Velocity**                    |     6     |     12     | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time |
-| 4   | **Governance & Security**               |     5     |     10     | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process                           |
-| 5   | **Observability & Cost**                |     6     |     12     | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics                         |
-| 6   | **Documentation & Context Engineering** |     5     |     10     | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs                     |
+| #   | Dimension                               | Questions | Max Points | What It Measures                                                                                                                |
+| --- | --------------------------------------- | :-------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Platform & Infrastructure**           |     6     |     12     | AI gateways, model registries, MCP servers, RAG infra, prompt management, secrets hygiene                                       |
+| 2   | **Developer Tooling & Adoption**        |     7     |     14     | AI steering files, rules, modalities used, custom skills, plugin ecosystem, model selection, agent task coverage                |
+| 3   | **CI/CD & Velocity**                    |     6     |     12     | Pipeline scaling for AI-driven PR volume, bottleneck measurement, AI code review catch rate, flaky test trends, PR cycle time   |
+| 4   | **Governance & Security**               |     5     |     10     | AI artifact SDLC, prompt security, usage policy, AI code attribution, differentiated review process                             |
+| 5   | **Observability & Cost**                |     6     |     12     | LLM tracing, dev-workflow dashboards, per-team cost attribution, RAG savings measurement, SRE metrics                           |
+| 6   | **Documentation & Context Engineering** |     5     |     10     | AI-friendly docs, spec accuracy, context delivery strategy, knowledge base freshness, auto-generated docs                       |
+| 7   | **Agent Maturity**                      |     6     |     12     | Agent scoping and permissions, structured outputs, composable workflows, session tracing, human-in-the-loop, instruction SDLC   |
+| 8   | **Eval Quality**                        |     6     |     12     | Automated eval frameworks, CI-gated evals, versioned datasets, benchmark suites, business-outcome metrics, regression detection |
 
 See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidence sources.
 
@@ -62,10 +64,14 @@ See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidenc
 
 | Tier    | Score | Label               |
 | ------- | ----- | ------------------- |
-| Level 1 | 0–17  | 🔵 AI-Curious       |
-| Level 2 | 18–35 | 🟡 AI-Experimenting |
-| Level 3 | 36–52 | 🟠 AI-Scaling       |
-| Level 4 | 53–70 | 🟢 AI-Native        |
+| Level 1 | 0–22  | 🔴 AI-Curious       |
+| Level 2 | 23–46 | 🟡 AI-Experimenting |
+| Level 3 | 47–69 | 🟢 AI-Scaling       |
+| Level 4 | 70–94 | 🚀 AI-Native        |
+
+> **V1 → V1.1:** V1 measured 6 dimensions (35 questions, 70 pts). V1.1 adds two new dimensions —
+> **Agent Maturity** and **Eval Quality** — that V1 missed entirely. Read the full story:
+> [What V1 of the AI Adoption Scorecard Missed: Agents and Eval](https://blog.angelcantugr.dev/what-v1-missed)
 
 ---
 
@@ -153,12 +159,12 @@ ai-scorecard assess --github-org acme-corp --ai-inference
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║  AI ADOPTION SCORECARD                                   ║
+║  AI ADOPTION SCORECARD  (V1.1)                           ║
 ║  Organization: org:acme-corp                             ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
-║  Overall Score: 38/70 (54%)                              ║
-║  Maturity Tier: 🟠 Level 3 — AI-Scaling                  ║
+║  Overall Score: 51/94 (54%)                              ║
+║  Maturity Tier: 🟢 Level 3 — AI-Scaling                  ║
 ║  Confidence: 81%                                         ║
 ║                                                          ║
 ╠══════════════════════════════════════════════════════════╣
@@ -170,13 +176,15 @@ ai-scorecard assess --github-org acme-corp --ai-inference
 ║  Governance & Security          ████░░░░░░░░  4/10 (40%) ║
 ║  Observability & Cost           ██████░░░░░░  6/12 (50%) ║
 ║  Documentation & Context Eng.   █████░░░░░░░  5/10 (50%) ║
+║  Agent Maturity                 ████████░░░░  7/12 (58%) ║
+║  Eval Quality                   ████░░░░░░░░  6/12 (50%) ║
 ╠══════════════════════════════════════════════════════════╣
 ║  TOP GAPS (biggest opportunities)                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  ⚠ D1Q1: Centralized AI gateway with logging             ║
 ║  ⚠ D4Q22: Formal AI usage policy                         ║
-║  ⚠ D5Q27: Per-team model cost attribution                ║
-║  ⚠ D3Q16: AI code review catch rate tracked              ║
+║  ⚠ D8Q43: Evals as a required CI gate                    ║
+║  ⚠ D7Q40: Human-in-the-loop approval for agent actions   ║
 ╚══════════════════════════════════════════════════════════╝
 
 Completed in 8.3s
@@ -205,7 +213,7 @@ Completed in 8.3s
 ```
 packages/
 ├── adapters/     # Data collection — GitHub API, CI/CD signals
-├── core/         # Scoring engine, 35 questions, evidence model, tiers
+├── core/         # Scoring engine, 47 questions, 8 dimensions, evidence model, tiers
 ├── cli/          # CLI entry point and formatters (table, JSON, Markdown)
 └── dashboard/    # Next.js results UI — radar chart, dimension breakdown, gap
                   # analysis, PDF export, URL-encoded shareable links
@@ -277,10 +285,11 @@ agent instructions for AI-assisted development on this repo.
 ## Roadmap
 
 - [x] GitHub adapter — repos, PRs, Actions, security settings
-- [x] Scoring engine — 35 questions, 6 dimensions, confidence levels
+- [x] Scoring engine — 47 questions, 8 dimensions, confidence levels (V1.1)
 - [x] CLI — table / JSON / Markdown output, dry-run mode
 - [x] Dashboard — radar chart, dimension breakdown, gap analysis, PDF export, shareable links
-- [ ] npm release of `@ai-scorecard/cli` (V1 launch blocker)
+- [x] V1.1 — Agent Maturity (D7) and Eval Quality (D8) dimensions added
+- [ ] npm release of `@ai-scorecard/cli`
 - [ ] Continuous monitoring — scheduled re-scans + trend tracking (V2)
 - [ ] GitLab adapter (V2)
 - [ ] Anonymous org benchmarking — "how do you compare to similar-sized orgs?" (V2)
