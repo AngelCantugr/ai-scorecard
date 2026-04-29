@@ -1,0 +1,12 @@
+{
+  "_description": "GET contents response for a committed .env file containing a fake OpenAI-style key.",
+  "data": {
+    "name": ".env",
+    "path": ".env",
+    "sha": "3aaa",
+    "type": "file",
+    "encoding": "base64",
+    "_decoded": "OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwx\nDB_PASSWORD=hunter2hunter2hunter2\n",
+    "content": "T1BFTkFJX0FQSV9LRVk9c2stYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4CkRCX1BBU1NXT1JEPWh1bnRlcjJodW50ZXIyaHVudGVyMgo="
+  }
+}

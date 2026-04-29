@@ -1,0 +1,13 @@
+{
+  "_description": "GitHub 401 Unauthorized error shape thrown by Octokit when the token is invalid or expired.",
+  "status": 401,
+  "name": "HttpError",
+  "message": "Bad credentials",
+  "response": {
+    "status": 401,
+    "data": {
+      "message": "Bad credentials",
+      "documentation_url": "https://docs.github.com/rest"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_description": "GitHub 404 Not Found error shape (e.g. file or repo not found).",
+  "status": 404,
+  "name": "HttpError",
+  "message": "Not Found",
+  "response": {
+    "status": 404,
+    "data": {
+      "message": "Not Found",
+      "documentation_url": "https://docs.github.com/rest"
+    }
+  }
+}

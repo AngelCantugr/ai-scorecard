@@ -1,0 +1,12 @@
+{
+  "_description": "GET /repos/{owner}/{repo}/contents/{path} response for a CLAUDE.md with lint, test, and debug rules — sufficient depth to score Q8 as 2.",
+  "data": {
+    "name": "CLAUDE.md",
+    "path": "CLAUDE.md",
+    "sha": "1aaa",
+    "type": "file",
+    "encoding": "base64",
+    "_decoded": "# AI Agent Instructions\n\n## Linting\nUse eslint and prettier. Run `pnpm lint` and `pnpm format` before commits.\n\n## Testing\nRun `pnpm test` (vitest) and ensure coverage stays above 80%. Use `vitest run --coverage`.\n\n## Debugging\nAdd structured log/trace statements, attach a debugger, or set breakpoints in VSCode.\n",
+    "content": "IyBBSSBBZ2VudCBJbnN0cnVjdGlvbnMKCiMjIExpbnRpbmcKVXNlIGVzbGludCBhbmQgcHJldHRpZXIuIFJ1biBgcG5wbSBsaW50YCBhbmQgYHBucG0gZm9ybWF0YCBiZWZvcmUgY29tbWl0cy4KCiMjIFRlc3RpbmcKUnVuIGBwbnBtIHRlc3RgICh2aXRlc3QpIGFuZCBlbnN1cmUgY292ZXJhZ2Ugc3RheXMgYWJvdmUgODAlLiBVc2UgYHZpdGVzdCBydW4gLS1jb3ZlcmFnZWAuCgojIyBEZWJ1Z2dpbmcKQWRkIHN0cnVjdHVyZWQgbG9nL3RyYWNlIHN0YXRlbWVudHMsIGF0dGFjaCBhIGRlYnVnZ2VyLCBvciBzZXQgYnJlYWtwb2ludHMgaW4gVlNDb2RlLgo="
+  }
+}

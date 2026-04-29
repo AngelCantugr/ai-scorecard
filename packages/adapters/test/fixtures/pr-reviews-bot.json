@@ -1,0 +1,19 @@
+{
+  "_description": "GET /repos/{owner}/{repo}/pulls/{n}/reviews response — includes a coderabbitai review.",
+  "data": [
+    {
+      "id": 5001,
+      "user": { "login": "coderabbitai[bot]" },
+      "body": "Review summary: 2 issues found in src/auth.ts. Consider refactoring the duplicate code.",
+      "state": "COMMENTED",
+      "submitted_at": "__NOW_MINUS_2_DAYS__"
+    },
+    {
+      "id": 5002,
+      "user": { "login": "alice" },
+      "body": "LGTM",
+      "state": "APPROVED",
+      "submitted_at": "__NOW_MINUS_2_DAYS__"
+    }
+  ]
+}

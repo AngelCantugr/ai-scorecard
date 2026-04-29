@@ -1,0 +1,12 @@
+{
+  "_description": "GET contents response for .github/workflows/eval.yml — a workflow that invokes promptfoo eval.",
+  "data": {
+    "name": "eval.yml",
+    "path": ".github/workflows/eval.yml",
+    "sha": "2bbb",
+    "type": "file",
+    "encoding": "base64",
+    "_decoded": "name: Eval\non: [pull_request]\njobs:\n  eval:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npx promptfoo eval -c promptfooconfig.yaml\n",
+    "content": "bmFtZTogRXZhbApvbjogW3B1bGxfcmVxdWVzdF0Kam9iczoKICBldmFsOgogICAgcnVucy1vbjogdWJ1bnR1LWxhdGVzdAogICAgc3RlcHM6CiAgICAgIC0gdXNlczogYWN0aW9ucy9jaGVja291dEB2NAogICAgICAtIHJ1bjogbnB4IHByb21wdGZvbyBldmFsIC1jIHByb21wdGZvb2NvbmZpZy55YW1sCg=="
+  }
+}

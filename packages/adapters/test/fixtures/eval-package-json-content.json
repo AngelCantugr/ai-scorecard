@@ -1,0 +1,12 @@
+{
+  "_description": "GET contents response for package.json with promptfoo and ragas dependencies (eval framework deps).",
+  "data": {
+    "name": "package.json",
+    "path": "package.json",
+    "sha": "2aaa",
+    "type": "file",
+    "encoding": "base64",
+    "_decoded": "{\n  \"name\": \"app\",\n  \"dependencies\": {\n    \"promptfoo\": \"^0.86.0\",\n    \"ragas\": \"^0.1.0\"\n  }\n}\n",
+    "content": "ewogICJuYW1lIjogImFwcCIsCiAgImRlcGVuZGVuY2llcyI6IHsKICAgICJwcm9tcHRmb28iOiAiXjAuODYuMCIsCiAgICAicmFnYXMiOiAiXjAuMS4wIgogIH0KfQo="
+  }
+}

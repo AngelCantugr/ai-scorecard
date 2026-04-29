@@ -1,0 +1,53 @@
+{
+  "_description": "GET actions/runs response — small set of runs with mixed conclusions, including failures and timeouts. Used to test Q14 lower-score paths.",
+  "data": {
+    "total_count": 5,
+    "workflow_runs": [
+      {
+        "id": 1,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "__NOW_MINUS_1_DAY__",
+        "updated_at": "__NOW_MINUS_1_DAY_PLUS_5_MIN__",
+        "run_started_at": "__NOW_MINUS_1_DAY__"
+      },
+      {
+        "id": 2,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "failure",
+        "created_at": "__NOW_MINUS_2_DAYS__",
+        "updated_at": "__NOW_MINUS_2_DAYS_PLUS_3_MIN__",
+        "run_started_at": "__NOW_MINUS_2_DAYS__"
+      },
+      {
+        "id": 3,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "timed_out",
+        "created_at": "__NOW_MINUS_3_DAYS__",
+        "updated_at": "__NOW_MINUS_3_DAYS_PLUS_8_MIN__",
+        "run_started_at": "__NOW_MINUS_3_DAYS__"
+      },
+      {
+        "id": 4,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "__NOW_MINUS_4_DAYS__",
+        "updated_at": "__NOW_MINUS_4_DAYS_PLUS_7_MIN__",
+        "run_started_at": "__NOW_MINUS_4_DAYS__"
+      },
+      {
+        "id": 5,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "failure",
+        "created_at": "__NOW_MINUS_5_DAYS__",
+        "updated_at": "__NOW_MINUS_5_DAYS_PLUS_2_MIN__",
+        "run_started_at": "__NOW_MINUS_5_DAYS__"
+      }
+    ]
+  }
+}
