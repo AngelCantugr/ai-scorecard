@@ -413,7 +413,8 @@ export const questions: Question[] = [
       1: "Some scope definitions exist but are not enforced or reviewed.",
       2: "All agents have formally defined scopes, least-privilege permissions, and documented boundaries.",
     },
-    measurementStrategy: "Scan agent configs for permission scopes, RBAC definitions, sandbox configs",
+    measurementStrategy:
+      "Scan agent configs for permission scopes, RBAC definitions, sandbox configs",
   },
   {
     id: "D7-Q37",
@@ -424,7 +425,8 @@ export const questions: Question[] = [
       1: "Some structured outputs but validation is inconsistent.",
       2: "All agent outputs have formal schemas with runtime validation and error handling.",
     },
-    measurementStrategy: "Scan for output schema definitions, Zod/JSON Schema validators in agent code",
+    measurementStrategy:
+      "Scan for output schema definitions, Zod/JSON Schema validators in agent code",
   },
   {
     id: "D7-Q38",
@@ -435,7 +437,8 @@ export const questions: Question[] = [
       1: "Some ad-hoc composition but no formal framework.",
       2: "Shared framework for composing multi-step workflows with standardized interfaces and error recovery.",
     },
-    measurementStrategy: "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
+    measurementStrategy:
+      "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
   },
   {
     id: "D7-Q39",
@@ -446,7 +449,8 @@ export const questions: Question[] = [
       1: "Logs exist but are not structured or queryable.",
       2: "Structured session traces with correlation IDs, step-by-step logs, and replay capability.",
     },
-    measurementStrategy: "Scan for trace configs, structured logging patterns, observability integrations",
+    measurementStrategy:
+      "Scan for trace configs, structured logging patterns, observability integrations",
   },
   {
     id: "D7-Q40",
@@ -468,7 +472,8 @@ export const questions: Question[] = [
       1: "Instructions are tracked in version control but without a review process.",
       2: "Agent instructions follow full SDLC — versioned, peer-reviewed, tested, with change history.",
     },
-    measurementStrategy: "Git history on agent instruction files, PR review patterns for prompt changes",
+    measurementStrategy:
+      "Git history on agent instruction files, PR review patterns for prompt changes",
   },
 
   // D8: Eval Quality
@@ -481,7 +486,8 @@ export const questions: Question[] = [
       1: "Manual spot-checks or basic automated tests exist.",
       2: "Automated eval framework with quantitative metrics covering accuracy, relevance, and safety.",
     },
-    measurementStrategy: "Scan for eval framework configs (Promptfoo, RAGAS, custom harnesses), test datasets",
+    measurementStrategy:
+      "Scan for eval framework configs (Promptfoo, RAGAS, custom harnesses), test datasets",
   },
   {
     id: "D8-Q43",
@@ -514,7 +520,8 @@ export const questions: Question[] = [
       1: "Ad-hoc comparisons made informally.",
       2: "Formal benchmark suite with pass/fail criteria and automated comparison on model updates.",
     },
-    measurementStrategy: "Benchmark config files, model comparison scripts, promotion gate definitions",
+    measurementStrategy:
+      "Benchmark config files, model comparison scripts, promotion gate definitions",
   },
   {
     id: "D8-Q46",
@@ -525,7 +532,8 @@ export const questions: Question[] = [
       1: "Some business-relevant metrics tracked but not standardized.",
       2: "Evals include business KPIs (task completion rate, user satisfaction, cost per outcome) alongside technical metrics.",
     },
-    measurementStrategy: "Eval metric definitions, dashboards with business KPIs, outcome tracking configs",
+    measurementStrategy:
+      "Eval metric definitions, dashboards with business KPIs, outcome tracking configs",
   },
   {
     id: "D8-Q47",
@@ -536,6 +544,7 @@ export const questions: Question[] = [
       1: "Periodic manual checks for quality regression.",
       2: "Automated regression detection with alerts, quality gates, and historical trend analysis.",
     },
-    measurementStrategy: "Regression test configs, monitoring dashboards, alert definitions for quality metrics",
+    measurementStrategy:
+      "Regression test configs, monitoring dashboards, alert definitions for quality metrics",
   },
 ];
