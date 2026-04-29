@@ -1,6 +1,9 @@
+import { z } from "zod";
 import { dimensions } from "./dimensions.js";
 import { questions } from "./questions.js";
 import { tiers } from "./tiers.js";
+import { ScoringValidationError } from "./errors.js";
+import { SignalResultSchema } from "./types/adapter.js";
 import type {
   DimensionScore,
   QuestionScore,
@@ -8,21 +11,35 @@ import type {
   SignalResult,
 } from "./types/index.js";
 
+const SignalResultsInputSchema = z.array(SignalResultSchema);
+
 /**
  * Takes raw signal results from adapters and computes the full scorecard.
  *
  * When multiple signals map to the same question (e.g., GitHub adapter + AI inference
  * both score Q7), use the signal with the highest confidence. If confidence is equal,
  * use the higher score (benefit of the doubt).
+ *
+ * @throws {ScoringValidationError} if any signal in `signals` does not match
+ *   {@link SignalResultSchema} — for example, a missing `evidence.summary`,
+ *   `score` outside 0/1/2, or `confidence` outside [0, 1]. This is a hard
+ *   boundary check: AI-inferred or adapter-supplied evidence must conform
+ *   before any score is computed.
  */
 export function computeScorecard(
   signals: SignalResult[],
   metadata: { adapterName: string; target: string },
   assessedAt: Date = new Date()
 ): ScorecardResult {
+  const parsed = SignalResultsInputSchema.safeParse(signals);
+  if (!parsed.success) {
+    throw new ScoringValidationError(parsed.error);
+  }
+  const validatedSignals = parsed.data;
+
   // 1. Deduplicate signals — keep highest confidence; break ties with higher score
   const dedupedSignals = new Map<string, SignalResult>();
-  for (const signal of signals) {
+  for (const signal of validatedSignals) {
     const existing = dedupedSignals.get(signal.questionId);
     if (
       !existing ||
