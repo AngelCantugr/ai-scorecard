@@ -60,6 +60,33 @@ See [`SPEC.md`](SPEC.md) for the full question set, scoring rubrics, and evidenc
 
 ---
 
+## How Scoring Works
+
+The scorecard is **hybrid by design**. Some questions can be answered straight from
+GitHub data (file presence, commit activity, CI configs, branch protection, etc.).
+Others — like _"do you have a centralized AI gateway?"_ or _"is your usage policy
+enforced?"_ — can't be settled by repo scanning alone, so the tool reads the relevant
+files and asks an LLM (Anthropic Claude) to make a judgment based on what it finds.
+
+Of the 47 questions:
+
+- **23 are answered by deterministic GitHub data collectors** — file scans, Actions
+  workflow analysis, PR/commit metadata, secret scanning settings.
+- **24 are answered by AI inference** when `--ai-inference` is enabled (otherwise they
+  score 0 with no evidence).
+
+AI-inferred answers are LLM judgments and are **less certain than direct measurements
+by design**. The scoring engine clamps inferred-question confidence to the **0.3–0.7
+range** (see `packages/adapters/src/ai-inference/index.ts`) so they cannot drown out
+high-confidence GitHub signals when computing the overall confidence score.
+
+Every score ships with its `evidence.source` (e.g. `github:repos`, `github:actions`,
+`ai-inference`). The dashboard surfaces this on each question so you can tell at a
+glance whether a number came from a measurement or a model. See [`SPEC.md`](SPEC.md)
+for the per-question evidence mapping.
+
+---
+
 ## Maturity Tiers
 
 | Tier    | Score | Label               |
