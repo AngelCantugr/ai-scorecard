@@ -28,5 +28,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code (per-developer overrides)
+.claude/settings.local.json
+
 # npm lock file (project uses pnpm)
 package-lock.json

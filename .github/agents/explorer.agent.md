@@ -1,4 +1,5 @@
 ---
+name: explorer
 description: Read-only codebase explorer. Maps affected files, existing patterns, and reuse candidates to inform implementation before any code is written.
 ---
 
