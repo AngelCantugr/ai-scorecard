@@ -1,4 +1,4 @@
-# AI Adoption Scorecard — V1 Spec
+# AI Adoption Scorecard — V1.1 Spec
 
 ## Overview
 
@@ -24,19 +24,19 @@ An open-source, automated AI adoption scorecard for CTOs and engineering leaders
 
 ## Scoring Model
 
-- **35 questions** across **6 dimensions**
+- **47 questions** across **8 dimensions**
 - **0–1–2 scale** per question (0 = not adopted, 1 = partial, 2 = fully adopted)
-- **70 maximum points**
+- **94 maximum points**
 - Each score is backed by **evidence** (data from adapters) and a **confidence level** (how reliable the signal is)
 
 ## Maturity Tiers
 
 | Tier    | Score Range | Label               |
 | ------- | ----------- | ------------------- |
-| Level 1 | 0–17        | 🔴 AI-Curious       |
-| Level 2 | 18–35       | 🟡 AI-Experimenting |
-| Level 3 | 36–52       | 🟢 AI-Scaling       |
-| Level 4 | 53–70       | 🚀 AI-Native        |
+| Level 1 | 0–22        | 🔴 AI-Curious       |
+| Level 2 | 23–46       | 🟡 AI-Experimenting |
+| Level 3 | 47–69       | 🟢 AI-Scaling       |
+| Level 4 | 70–94       | 🚀 AI-Native        |
 
 ## Dimensions & Questions
 
@@ -117,6 +117,32 @@ Evaluates the organization's strategy for making knowledge accessible to both hu
 | 34  | Are knowledge bases and RAG sources maintained with the same rigor as production code?                | **0**: Knowledge bases are stale or unmaintained. **1**: Periodically updated but no formal process. **2**: Knowledge bases have CI/CD — automated ingestion, freshness checks, and quality validation.                                | RAG pipeline configs, ingestion schedules, freshness monitoring                |
 | 35  | Is there a strategy to reduce dependency on human-written docs by using verified, structured sources? | **0**: Fully dependent on human-written prose. **1**: Some auto-generated docs (e.g., from code). **2**: Strategy to derive documentation from code, tests, and types — with accuracy guarantees.                                      | Auto-doc tooling configs (TypeDoc, Swagger), doc generation in CI              |
 
+### D7: Agent Maturity (6 questions, max 12 points)
+
+Assesses how mature the organization's AI agent development, deployment, and oversight practices are — from scoping and structured outputs to human oversight and lifecycle management.
+
+| #   | Question                                                                                   | Scoring Rubric                                                                                                                                                                                                                                                           | Measurable Via                                                                        |
+| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| 36  | Are AI agents deployed with clearly defined scopes, permissions, and execution boundaries? | **0**: No formal scoping — agents run with broad or undefined permissions. **1**: Some scope definitions exist but are not enforced or reviewed. **2**: All agents have formally defined scopes, least-privilege permissions, and documented boundaries.                 | Scan agent configs for permission scopes, RBAC definitions, sandbox configs           |
+| 37  | Do agents produce structured outputs with validation schemas rather than free-form text?   | **0**: Agents return free-form text with no output validation. **1**: Some structured outputs but validation is inconsistent. **2**: All agent outputs have formal schemas with runtime validation and error handling.                                                   | Scan for output schema definitions, Zod/JSON Schema validators in agent code          |
+| 38  | Is there a composable framework for building multi-step agent workflows?                   | **0**: Agents are one-off scripts with no reuse. **1**: Some ad-hoc composition but no formal framework. **2**: Shared framework for composing multi-step workflows with standardized interfaces and error recovery.                                                     | Scan for workflow orchestration configs, shared agent libraries, workflow definitions |
+| 39  | Are agent sessions logged with reproducible traces for debugging and auditing?             | **0**: No agent logging beyond basic stdout. **1**: Logs exist but are not structured or queryable. **2**: Structured session traces with correlation IDs, step-by-step logs, and replay capability.                                                                     | Scan for trace configs, structured logging patterns, observability integrations       |
+| 40  | Is there a human-in-the-loop approval step for high-risk agent actions?                    | **0**: No human oversight — agents act autonomously on all tasks. **1**: Informal reviews for some high-risk tasks. **2**: Formal approval workflows for high-risk actions with clear escalation paths and audit trails.                                                 | Scan for approval workflow configs, review gates in agent pipelines                   |
+| 41  | Are agent system prompts and instructions versioned and reviewed like production code?     | **0**: Agent instructions are informal or embedded in code without version control. **1**: Instructions are tracked in version control but without a review process. **2**: Agent instructions follow full SDLC — versioned, peer-reviewed, tested, with change history. | Git history on agent instruction files, PR review patterns for prompt changes         |
+
+### D8: Eval Quality (6 questions, max 12 points)
+
+Measures the maturity of the organization's AI evaluation practices — from automated frameworks and CI integration to dataset governance, regression detection, and business-outcome alignment.
+
+| #   | Question                                                                                      | Scoring Rubric                                                                                                                                                                                                                                                        | Measurable Via                                                                        |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 42  | Is there an automated evaluation framework to measure AI output quality?                      | **0**: No structured evaluation — quality is assessed informally. **1**: Manual spot-checks or basic automated tests exist. **2**: Automated eval framework with quantitative metrics covering accuracy, relevance, and safety.                                       | Scan for eval framework configs (Promptfoo, RAGAS, custom harnesses), test datasets   |
+| 43  | Are evals executed in CI on every change to prompts, models, or agent definitions?            | **0**: Evals are not tied to the development lifecycle. **1**: Evals are run manually or on a schedule. **2**: Evals are a required CI gate — any change to AI components triggers the eval suite automatically.                                                      | CI/CD configs for eval runs, GitHub Actions eval workflows                            |
+| 44  | Are evaluation datasets maintained in version control with clear ownership?                   | **0**: No dedicated eval datasets — testing uses ad-hoc examples. **1**: Datasets exist but are not versioned or regularly updated. **2**: Curated, versioned eval datasets with ownership, refresh schedules, and bias review.                                       | Scan repos for dataset files, versioning history, ownership metadata                  |
+| 45  | Is there a benchmark suite used to compare model versions before promotion?                   | **0**: No benchmarking — models are promoted without comparison. **1**: Ad-hoc comparisons made informally. **2**: Formal benchmark suite with pass/fail criteria and automated comparison on model updates.                                                          | Benchmark config files, model comparison scripts, promotion gate definitions          |
+| 46  | Do evals measure business-relevant outcomes alongside technical metrics?                      | **0**: Evals only measure technical metrics (e.g., BLEU, perplexity). **1**: Some business-relevant metrics tracked but not standardized. **2**: Evals include business KPIs (task completion rate, user satisfaction, cost per outcome) alongside technical metrics. | Eval metric definitions, dashboards with business KPIs, outcome tracking configs      |
+| 47  | Is there a regression detection process to catch quality degradation in AI outputs over time? | **0**: No regression detection — quality issues are discovered in production. **1**: Periodic manual checks for quality regression. **2**: Automated regression detection with alerts, quality gates, and historical trend analysis.                                  | Regression test configs, monitoring dashboards, alert definitions for quality metrics |
+
 ## Adapter Interface
 
 Each adapter connects to a data source and produces scored signals:
@@ -130,7 +156,7 @@ interface Adapter {
 }
 
 interface SignalResult {
-  questionId: string; // maps to one of the 35 questions
+  questionId: string; // maps to one of the 47 questions
   score: 0 | 1 | 2;
   evidence: Evidence; // raw data backing the score
   confidence: number; // 0-1, how reliable the signal is
@@ -143,7 +169,7 @@ interface Evidence {
 }
 ```
 
-## V1 Scope
+## V1.1 Scope
 
 - **GitHub adapter** as the first and only data source
 - **AI inference** (LLM analysis) for questions that can't be directly measured

@@ -402,4 +402,149 @@ export const questions: Question[] = [
     },
     measurementStrategy: "Auto-doc tooling configs (TypeDoc, Swagger), doc generation in CI",
   },
+
+  // D7: Agent Maturity
+  {
+    id: "D7-Q36",
+    dimensionId: "agent-maturity",
+    text: "Are AI agents deployed with clearly defined scopes, permissions, and execution boundaries?",
+    rubric: {
+      0: "No formal scoping — agents run with broad or undefined permissions.",
+      1: "Some scope definitions exist but are not enforced or reviewed.",
+      2: "All agents have formally defined scopes, least-privilege permissions, and documented boundaries.",
+    },
+    measurementStrategy:
+      "Scan agent configs for permission scopes, RBAC definitions, sandbox configs",
+  },
+  {
+    id: "D7-Q37",
+    dimensionId: "agent-maturity",
+    text: "Do agents produce structured outputs with validation schemas rather than free-form text?",
+    rubric: {
+      0: "Agents return free-form text with no output validation.",
+      1: "Some structured outputs but validation is inconsistent.",
+      2: "All agent outputs have formal schemas with runtime validation and error handling.",
+    },
+    measurementStrategy:
+      "Scan for output schema definitions, Zod/JSON Schema validators in agent code",
+  },
+  {
+    id: "D7-Q38",
+    dimensionId: "agent-maturity",
+    text: "Is there a composable framework for building multi-step agent workflows?",
+    rubric: {
+      0: "Agents are one-off scripts with no reuse.",
+      1: "Some ad-hoc composition but no formal framework.",
+      2: "Shared framework for composing multi-step workflows with standardized interfaces and error recovery.",
+    },
+    measurementStrategy:
+      "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
+  },
+  {
+    id: "D7-Q39",
+    dimensionId: "agent-maturity",
+    text: "Are agent sessions logged with reproducible traces for debugging and auditing?",
+    rubric: {
+      0: "No agent logging beyond basic stdout.",
+      1: "Logs exist but are not structured or queryable.",
+      2: "Structured session traces with correlation IDs, step-by-step logs, and replay capability.",
+    },
+    measurementStrategy:
+      "Scan for trace configs, structured logging patterns, observability integrations",
+  },
+  {
+    id: "D7-Q40",
+    dimensionId: "agent-maturity",
+    text: "Is there a human-in-the-loop approval step for high-risk agent actions?",
+    rubric: {
+      0: "No human oversight — agents act autonomously on all tasks.",
+      1: "Informal reviews for some high-risk tasks.",
+      2: "Formal approval workflows for high-risk actions with clear escalation paths and audit trails.",
+    },
+    measurementStrategy: "Scan for approval workflow configs, review gates in agent pipelines",
+  },
+  {
+    id: "D7-Q41",
+    dimensionId: "agent-maturity",
+    text: "Are agent system prompts and instructions versioned and reviewed like production code?",
+    rubric: {
+      0: "Agent instructions are informal or embedded in code without version control.",
+      1: "Instructions are tracked in version control but without a review process.",
+      2: "Agent instructions follow full SDLC — versioned, peer-reviewed, tested, with change history.",
+    },
+    measurementStrategy:
+      "Git history on agent instruction files, PR review patterns for prompt changes",
+  },
+
+  // D8: Eval Quality
+  {
+    id: "D8-Q42",
+    dimensionId: "eval-quality",
+    text: "Is there an automated evaluation framework to measure AI output quality?",
+    rubric: {
+      0: "No structured evaluation — quality is assessed informally.",
+      1: "Manual spot-checks or basic automated tests exist.",
+      2: "Automated eval framework with quantitative metrics covering accuracy, relevance, and safety.",
+    },
+    measurementStrategy:
+      "Scan for eval framework configs (Promptfoo, RAGAS, custom harnesses), test datasets",
+  },
+  {
+    id: "D8-Q43",
+    dimensionId: "eval-quality",
+    text: "Are evals executed in CI on every change to prompts, models, or agent definitions?",
+    rubric: {
+      0: "Evals are not tied to the development lifecycle.",
+      1: "Evals are run manually or on a schedule.",
+      2: "Evals are a required CI gate — any change to AI components triggers the eval suite automatically.",
+    },
+    measurementStrategy: "CI/CD configs for eval runs, GitHub Actions eval workflows",
+  },
+  {
+    id: "D8-Q44",
+    dimensionId: "eval-quality",
+    text: "Are evaluation datasets maintained in version control with clear ownership?",
+    rubric: {
+      0: "No dedicated eval datasets — testing uses ad-hoc examples.",
+      1: "Datasets exist but are not versioned or regularly updated.",
+      2: "Curated, versioned eval datasets with ownership, refresh schedules, and bias review.",
+    },
+    measurementStrategy: "Scan repos for dataset files, versioning history, ownership metadata",
+  },
+  {
+    id: "D8-Q45",
+    dimensionId: "eval-quality",
+    text: "Is there a benchmark suite used to compare model versions before promotion?",
+    rubric: {
+      0: "No benchmarking — models are promoted without comparison.",
+      1: "Ad-hoc comparisons made informally.",
+      2: "Formal benchmark suite with pass/fail criteria and automated comparison on model updates.",
+    },
+    measurementStrategy:
+      "Benchmark config files, model comparison scripts, promotion gate definitions",
+  },
+  {
+    id: "D8-Q46",
+    dimensionId: "eval-quality",
+    text: "Do evals measure business-relevant outcomes alongside technical metrics?",
+    rubric: {
+      0: "Evals only measure technical metrics (e.g., BLEU, perplexity).",
+      1: "Some business-relevant metrics tracked but not standardized.",
+      2: "Evals include business KPIs (task completion rate, user satisfaction, cost per outcome) alongside technical metrics.",
+    },
+    measurementStrategy:
+      "Eval metric definitions, dashboards with business KPIs, outcome tracking configs",
+  },
+  {
+    id: "D8-Q47",
+    dimensionId: "eval-quality",
+    text: "Is there a regression detection process to catch quality degradation in AI outputs over time?",
+    rubric: {
+      0: "No regression detection — quality issues are discovered in production.",
+      1: "Periodic manual checks for quality regression.",
+      2: "Automated regression detection with alerts, quality gates, and historical trend analysis.",
+    },
+    measurementStrategy:
+      "Regression test configs, monitoring dashboards, alert definitions for quality metrics",
+  },
 ];

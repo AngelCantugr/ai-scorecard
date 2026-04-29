@@ -3,7 +3,7 @@ import { computeScorecard } from "./engine.js";
 import type { ScorecardResult } from "./types/index.js";
 
 /** Current encoding version — increment on breaking spec changes */
-export const SHARE_VERSION = "1.0";
+export const SHARE_VERSION = "1.1";
 
 /** URL query parameter names */
 const PARAM_SCORES = "s";
@@ -13,8 +13,8 @@ const PARAM_ADAPTER = "a";
 const PARAM_VERSION = "v";
 
 /**
- * Encode 35 question scores (0–2 each) into a base64url string.
- * Each score occupies 2 bits; 35 × 2 = 70 bits packed into 9 bytes.
+ * Encode 47 question scores (0–2 each) into a base64url string.
+ * Each score occupies 2 bits; 47 × 2 = 94 bits packed into 12 bytes.
  */
 function encodeScores(scores: (0 | 1 | 2)[]): string {
   // Pack 2-bit values into bytes (4 scores per byte)
@@ -34,7 +34,7 @@ function encodeScores(scores: (0 | 1 | 2)[]): string {
 }
 
 /**
- * Decode a base64url string back into an array of 35 scores (0–2 each).
+ * Decode a base64url string back into an array of 47 scores (0–2 each).
  */
 function decodeScores(encoded: string): (0 | 1 | 2)[] {
   // Validate that the encoded string contains only valid base64url characters

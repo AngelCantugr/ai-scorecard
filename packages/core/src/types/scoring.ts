@@ -1,13 +1,15 @@
 import type { Evidence } from "./adapter.js";
 
-/** The 6 dimensions of the scorecard */
+/** The 8 dimensions of the scorecard */
 export type DimensionId =
   | "platform-infrastructure"
   | "developer-tooling"
   | "cicd-velocity"
   | "governance-security"
   | "observability-cost"
-  | "documentation-context";
+  | "documentation-context"
+  | "agent-maturity"
+  | "eval-quality";
 
 /** Dimension metadata */
 export interface Dimension {
@@ -65,7 +67,7 @@ export interface Tier {
 
 /** The complete scorecard result */
 export interface ScorecardResult {
-  /** Overall score (0-70): 35 questions × 2 points max */
+  /** Overall score (0-94): 47 questions × 2 points max */
   totalScore: number;
   /** Maximum possible score */
   maxScore: number;

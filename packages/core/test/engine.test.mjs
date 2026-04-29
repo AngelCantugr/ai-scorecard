@@ -16,12 +16,12 @@ function makeSignal(questionId, score, confidence = 1) {
   return { signalId: `sig-${questionId}`, questionId, score, evidence: [], confidence };
 }
 
-test("perfect score: all 35 questions scored 2 → total 70, tier AI-Native", () => {
+test("perfect score: all 47 questions scored 2 → total 94, tier AI-Native", () => {
   const signals = questions.map((q) => makeSignal(q.id, 2));
   const result = computeScorecard(signals, META);
 
-  assert.equal(result.totalScore, 70);
-  assert.equal(result.maxScore, 70);
+  assert.equal(result.totalScore, 94);
+  assert.equal(result.maxScore, 94);
   assert.equal(result.percentage, 100);
   assert.equal(result.tier.label, "AI-Native");
   assert.equal(result.tier.level, 4);
@@ -36,70 +36,70 @@ test("zero score: no signals → total 0, tier AI-Curious", () => {
   assert.equal(result.overallConfidence, 0);
 });
 
-test("mid-range score: 18 questions × 2 → total 36, tier AI-Scaling", () => {
-  const signals = questions.slice(0, 18).map((q) => makeSignal(q.id, 2));
+test("mid-range score: 24 questions × 2 → total 48, tier AI-Scaling", () => {
+  const signals = questions.slice(0, 24).map((q) => makeSignal(q.id, 2));
   const result = computeScorecard(signals, META);
 
-  assert.equal(result.totalScore, 36);
+  assert.equal(result.totalScore, 48);
   assert.equal(result.tier.label, "AI-Scaling");
   assert.equal(result.tier.level, 3);
 });
 
-test("tier boundaries: 17 → L1 (AI-Curious), 18 → L2 (AI-Experimenting)", () => {
-  // 8 × 2 + 1 × 1 = 17
-  const signals17 = [
-    ...questions.slice(0, 8).map((q) => makeSignal(q.id, 2)),
-    makeSignal(questions[8].id, 1),
-  ];
-  const result17 = computeScorecard(signals17, META);
-  assert.equal(result17.totalScore, 17);
-  assert.equal(result17.tier.level, 1);
-  assert.equal(result17.tier.label, "AI-Curious");
+test("tier boundaries: 22 → L1 (AI-Curious), 23 → L2 (AI-Experimenting)", () => {
+  // 11 × 2 = 22
+  const signals22 = questions.slice(0, 11).map((q) => makeSignal(q.id, 2));
+  const result22 = computeScorecard(signals22, META);
+  assert.equal(result22.totalScore, 22);
+  assert.equal(result22.tier.level, 1);
+  assert.equal(result22.tier.label, "AI-Curious");
 
-  // 9 × 2 = 18
-  const signals18 = questions.slice(0, 9).map((q) => makeSignal(q.id, 2));
-  const result18 = computeScorecard(signals18, META);
-  assert.equal(result18.totalScore, 18);
-  assert.equal(result18.tier.level, 2);
-  assert.equal(result18.tier.label, "AI-Experimenting");
+  // 11 × 2 + 1 × 1 = 23
+  const signals23 = [
+    ...questions.slice(0, 11).map((q) => makeSignal(q.id, 2)),
+    makeSignal(questions[11].id, 1),
+  ];
+  const result23 = computeScorecard(signals23, META);
+  assert.equal(result23.totalScore, 23);
+  assert.equal(result23.tier.level, 2);
+  assert.equal(result23.tier.label, "AI-Experimenting");
 });
 
-test("tier boundaries: 35 → L2 (AI-Experimenting), 36 → L3 (AI-Scaling)", () => {
-  // 17 × 2 + 1 × 1 = 35
-  const signals35 = [
-    ...questions.slice(0, 17).map((q) => makeSignal(q.id, 2)),
-    makeSignal(questions[17].id, 1),
-  ];
-  const result35 = computeScorecard(signals35, META);
-  assert.equal(result35.totalScore, 35);
-  assert.equal(result35.tier.level, 2);
-  assert.equal(result35.tier.label, "AI-Experimenting");
+test("tier boundaries: 46 → L2 (AI-Experimenting), 47 → L3 (AI-Scaling)", () => {
+  // 23 × 2 = 46
+  const signals46 = questions.slice(0, 23).map((q) => makeSignal(q.id, 2));
+  const result46 = computeScorecard(signals46, META);
+  assert.equal(result46.totalScore, 46);
+  assert.equal(result46.tier.level, 2);
+  assert.equal(result46.tier.label, "AI-Experimenting");
 
-  // 18 × 2 = 36
-  const signals36 = questions.slice(0, 18).map((q) => makeSignal(q.id, 2));
-  const result36 = computeScorecard(signals36, META);
-  assert.equal(result36.totalScore, 36);
-  assert.equal(result36.tier.level, 3);
-  assert.equal(result36.tier.label, "AI-Scaling");
+  // 23 × 2 + 1 × 1 = 47
+  const signals47 = [
+    ...questions.slice(0, 23).map((q) => makeSignal(q.id, 2)),
+    makeSignal(questions[23].id, 1),
+  ];
+  const result47 = computeScorecard(signals47, META);
+  assert.equal(result47.totalScore, 47);
+  assert.equal(result47.tier.level, 3);
+  assert.equal(result47.tier.label, "AI-Scaling");
 });
 
-test("tier boundaries: 52 → L3 (AI-Scaling), 53 → L4 (AI-Native)", () => {
-  // 26 × 2 = 52
-  const signals52 = questions.slice(0, 26).map((q) => makeSignal(q.id, 2));
-  const result52 = computeScorecard(signals52, META);
-  assert.equal(result52.totalScore, 52);
-  assert.equal(result52.tier.level, 3);
-  assert.equal(result52.tier.label, "AI-Scaling");
-
-  // 26 × 2 + 1 × 1 = 53
-  const signals53 = [
-    ...questions.slice(0, 26).map((q) => makeSignal(q.id, 2)),
-    makeSignal(questions[26].id, 1),
+test("tier boundaries: 69 → L3 (AI-Scaling), 70 → L4 (AI-Native)", () => {
+  // 34 × 2 + 1 × 1 = 69
+  const signals69 = [
+    ...questions.slice(0, 34).map((q) => makeSignal(q.id, 2)),
+    makeSignal(questions[34].id, 1),
   ];
-  const result53 = computeScorecard(signals53, META);
-  assert.equal(result53.totalScore, 53);
-  assert.equal(result53.tier.level, 4);
-  assert.equal(result53.tier.label, "AI-Native");
+  const result69 = computeScorecard(signals69, META);
+  assert.equal(result69.totalScore, 69);
+  assert.equal(result69.tier.level, 3);
+  assert.equal(result69.tier.label, "AI-Scaling");
+
+  // 35 × 2 = 70
+  const signals70 = questions.slice(0, 35).map((q) => makeSignal(q.id, 2));
+  const result70 = computeScorecard(signals70, META);
+  assert.equal(result70.totalScore, 70);
+  assert.equal(result70.tier.level, 4);
+  assert.equal(result70.tier.label, "AI-Native");
 });
 
 test("signal deduplication: two signals for same question → highest confidence wins", () => {
@@ -203,7 +203,7 @@ test("overallConfidence: only includes measured questions (confidence > 0)", () 
   ];
   const result = computeScorecard(signals, META);
 
-  // average of 1.0 and 0.5 is 0.75; it should NOT include the 33 unmeasured questions at 0
+  // average of 1.0 and 0.5 is 0.75; it should NOT include the 45 unmeasured questions at 0
   assert.equal(result.overallConfidence, 0.75);
 });
 
