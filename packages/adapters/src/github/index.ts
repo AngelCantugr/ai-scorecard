@@ -21,6 +21,14 @@ import {
 } from "./collectors/pr-analytics.js";
 import { collectPipelineScalingSignal, collectTestQualitySignal } from "./collectors/actions.js";
 import { collectSecretsManagementSignal } from "./collectors/security.js";
+import {
+  collectAgentScopeSignal,
+  collectStructuredOutputsSignal,
+  collectComposableWorkflowsSignal,
+  collectSessionLoggingSignal,
+  collectHumanOversightSignal,
+  collectVersionedInstructionsSignal,
+} from "./collectors/agents.js";
 
 const DEFAULT_MAX_REPOS = 50;
 
@@ -105,6 +113,37 @@ const GITHUB_SIGNALS: Signal[] = [
     id: "github:repo-scan:q32-spec-accuracy",
     questionId: "D6-Q32",
     description: "Check if OpenAPI specs exist and are validated in CI",
+  },
+  {
+    id: "github:repo-scan:q36-agent-scope",
+    questionId: "D7-Q36",
+    description: "Scan agent configs for permission scopes, RBAC definitions, sandbox configs",
+  },
+  {
+    id: "github:repo-scan:q37-structured-outputs",
+    questionId: "D7-Q37",
+    description: "Scan for output schema definitions, Zod/JSON Schema validators in agent code",
+  },
+  {
+    id: "github:repo-scan:q38-composable-workflows",
+    questionId: "D7-Q38",
+    description:
+      "Scan for workflow orchestration configs, shared agent libraries, workflow definitions",
+  },
+  {
+    id: "github:repo-scan:q39-session-logging",
+    questionId: "D7-Q39",
+    description: "Scan for hook configs (preToolUse/postToolUse), session log configs",
+  },
+  {
+    id: "github:repo-scan:q40-human-oversight",
+    questionId: "D7-Q40",
+    description: "Scan for approval workflow configs, review gates in agent pipelines",
+  },
+  {
+    id: "github:repo-scan:q41-versioned-instructions",
+    questionId: "D7-Q41",
+    description: "Check git history on agent instruction files, PR review patterns",
   },
 ];
 
@@ -274,6 +313,30 @@ export class GitHubAdapter implements Adapter {
       {
         signal: GITHUB_SIGNALS[15]!,
         run: () => withRetry(() => collectSpecAccuracySignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[16]!,
+        run: () => withRetry(() => collectAgentScopeSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[17]!,
+        run: () => withRetry(() => collectStructuredOutputsSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[18]!,
+        run: () => withRetry(() => collectComposableWorkflowsSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[19]!,
+        run: () => withRetry(() => collectSessionLoggingSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[20]!,
+        run: () => withRetry(() => collectHumanOversightSignal(octokit, repos)),
+      },
+      {
+        signal: GITHUB_SIGNALS[21]!,
+        run: () => withRetry(() => collectVersionedInstructionsSignal(octokit, repos)),
       },
     ];
 
