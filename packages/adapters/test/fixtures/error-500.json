@@ -1,0 +1,13 @@
+{
+  "_description": "GitHub 500 Internal Server Error shape.",
+  "status": 500,
+  "name": "HttpError",
+  "message": "Server Error",
+  "response": {
+    "status": 500,
+    "data": {
+      "message": "Server Error",
+      "documentation_url": "https://docs.github.com/rest"
+    }
+  }
+}

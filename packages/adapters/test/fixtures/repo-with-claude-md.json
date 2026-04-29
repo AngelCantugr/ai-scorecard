@@ -1,0 +1,16 @@
+{
+  "_description": "Git tree response shape (GET /repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1) for a repo with comprehensive AI steering files: CLAUDE.md, agents.md, .cursorrules.",
+  "data": {
+    "sha": "abc123",
+    "url": "https://api.github.com/repos/test-org/repo-with-steering/git/trees/abc123",
+    "tree": [
+      { "type": "blob", "path": "CLAUDE.md", "sha": "1aaa", "mode": "100644" },
+      { "type": "blob", "path": "agents.md", "sha": "1bbb", "mode": "100644" },
+      { "type": "blob", "path": ".cursorrules", "sha": "1ccc", "mode": "100644" },
+      { "type": "blob", "path": "src/index.ts", "sha": "1ddd", "mode": "100644" },
+      { "type": "blob", "path": "package.json", "sha": "1eee", "mode": "100644" },
+      { "type": "blob", "path": "README.md", "sha": "1fff", "mode": "100644" }
+    ],
+    "truncated": false
+  }
+}
