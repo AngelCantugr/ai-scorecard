@@ -1,6 +1,11 @@
 import type { Octokit } from "@octokit/rest";
 import type { SignalResult, Evidence } from "@ai-scorecard/core";
 import type { RepoInfo } from "./repo-scan.js";
+import {
+  createCollectorContext,
+  type CollectorContext,
+  type CollectorOutcome,
+} from "../collector-error.js";
 
 /** Agent configuration directory names to scan */
 const AGENT_DIRS = [".github/agents", ".claude/agents", "agents"];
@@ -20,14 +25,19 @@ const AGENT_REGISTRY_FILES = ["agents.yaml", "agents.yml"];
 /** Hook configuration directory names */
 const HOOK_DIRS = [".github/hooks", ".claude/hooks"];
 
-/**
- * Safely fetch the tree of a repo at HEAD and return a flat list of file paths.
- */
+function statusOf(err: unknown): number | undefined {
+  if (err === null || typeof err !== "object") return undefined;
+  const s = (err as { status?: unknown }).status;
+  return typeof s === "number" ? s : undefined;
+}
+
+/** Fetch repo file paths; 404 silent, other errors reported. */
 async function fetchRepoFilePaths(
   octokit: Octokit,
   owner: string,
   repo: string,
-  defaultBranch: string
+  defaultBranch: string,
+  ctx: CollectorContext
 ): Promise<string[]> {
   try {
     const { data } = await octokit.git.getTree({
@@ -41,25 +51,19 @@ async function fetchRepoFilePaths(
       .map((item) => item.path ?? "")
       .filter(Boolean);
   } catch (err) {
-    const status =
-      err !== null && typeof err === "object" && "status" in err
-        ? (err as { status: number }).status
-        : undefined;
-    if (status === 404 || status === 403) {
-      return [];
-    }
-    throw err;
+    if (statusOf(err) === 404) return [];
+    ctx.report(err);
+    return [];
   }
 }
 
-/**
- * Safely read a file's content from GitHub, returning null on any error.
- */
+/** Read file content; null on 404, reports other errors. */
 async function safeReadFile(
   octokit: Octokit,
   owner: string,
   repo: string,
-  path: string
+  path: string,
+  ctx: CollectorContext
 ): Promise<string | null> {
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path });
@@ -67,21 +71,19 @@ async function safeReadFile(
       return Buffer.from(data.content, "base64").toString("utf-8");
     }
     return null;
-  } catch {
+  } catch (err) {
+    if (statusOf(err) === 404) return null;
+    ctx.report(err);
     return null;
   }
 }
 
-/**
- * Q36 — Agent scope/permissions
- * Score 0: No agent directories found
- * Score 1: Agent dirs exist but no explicit permission/scope definitions in file content
- * Score 2: Agent files found with explicit allowedTools / permission scope definitions
- */
+/** Q36 — Agent scope/permissions */
 export async function collectAgentScopeSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q36-agent-scope");
   const reposWithAgentDirs: string[] = [];
   const reposWithScopeDefinitions: string[] = [];
 
@@ -89,7 +91,7 @@ export async function collectAgentScopeSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const agentFiles = paths.filter(
       (p) =>
@@ -102,10 +104,9 @@ export async function collectAgentScopeSignal(
     if (agentFiles.length === 0) continue;
     reposWithAgentDirs.push(repo.fullName);
 
-    // Check agent files for permission/scope keywords
     let foundScope = false;
     for (const filePath of agentFiles) {
-      const content = await safeReadFile(octokit, owner, repo.name, filePath);
+      const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
       if (content && scopeKeywords.test(content)) {
         foundScope = true;
         break;
@@ -135,24 +136,23 @@ export async function collectAgentScopeSignal(
   else if (reposWithAgentDirs.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q36-agent-scope",
-    questionId: "D7-Q36",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q36",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q37 — Structured outputs
- * Score 0: No agent files with output schema definitions
- * Score 1: Some schema definitions found in 1 repo
- * Score 2: Schema definitions found in 2+ repos
- */
+/** Q37 — Structured outputs */
 export async function collectStructuredOutputsSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q37-structured-outputs");
   const reposWithSchemas: string[] = [];
 
   const schemaKeywords = /outputSchema|output_schema|response_format|\.schema\.json/i;
@@ -160,7 +160,7 @@ export async function collectStructuredOutputsSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const agentFiles = paths.filter(
       (p) =>
@@ -169,16 +169,14 @@ export async function collectStructuredOutputsSignal(
 
     let foundSchema = false;
 
-    // Check agent files directly for schema patterns
     for (const filePath of agentFiles) {
-      const content = await safeReadFile(octokit, owner, repo.name, filePath);
+      const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
       if (content && (schemaKeywords.test(content) || validatorImports.test(content))) {
         foundSchema = true;
         break;
       }
     }
 
-    // Check adjacent TypeScript/JavaScript files for Zod or JSON Schema imports
     if (!foundSchema) {
       const agentAdjacentFiles = paths.filter(
         (p) =>
@@ -186,7 +184,7 @@ export async function collectStructuredOutputsSignal(
           (p.endsWith(".ts") || p.endsWith(".js"))
       );
       for (const filePath of agentAdjacentFiles.slice(0, 5)) {
-        const content = await safeReadFile(octokit, owner, repo.name, filePath);
+        const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
         if (content && validatorImports.test(content)) {
           foundSchema = true;
           break;
@@ -215,38 +213,35 @@ export async function collectStructuredOutputsSignal(
   else if (reposWithSchemas.length === 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q37-structured-outputs",
-    questionId: "D7-Q37",
-    score,
-    evidence,
-    confidence: 0.5,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q37",
+      score,
+      evidence,
+      confidence: 0.5,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q38 — Composable workflows
- * Score 0: No composition evidence
- * Score 1: Some orchestration files exist in 1 repo
- * Score 2: Multi-repo or comprehensive framework (2+ signals of composability)
- */
+/** Q38 — Composable workflows */
 export async function collectComposableWorkflowsSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q38-composable-workflows");
   const reposWithComposition: string[] = [];
   const signalsByRepo: Record<string, string[]> = {};
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
     const signals: string[] = [];
 
-    // Check for copilot-setup-steps.yml
     if (paths.some((p) => p === ".github/workflows/copilot-setup-steps.yml")) {
       signals.push("copilot-setup-steps");
     }
 
-    // Check for agent registry/catalog files
     if (
       AGENT_REGISTRY_FILES.some((f) => paths.some((p) => p === f || p.endsWith(`/${f}`))) ||
       paths.some((p) => p === ".github/agents" || p.startsWith(".github/agents/"))
@@ -254,7 +249,6 @@ export async function collectComposableWorkflowsSignal(
       signals.push("agent-registry");
     }
 
-    // Check for MCP server config files
     if (MCP_CONFIG_FILES.some((f) => paths.some((p) => p === f || p.endsWith(`/${f}`)))) {
       signals.push("mcp-config");
     }
@@ -265,7 +259,6 @@ export async function collectComposableWorkflowsSignal(
     }
   }
 
-  // Count total distinct composability signals across all repos
   const totalSignals = Object.values(signalsByRepo).reduce((acc, s) => acc + s.length, 0);
 
   const evidence: Evidence[] = [
@@ -284,24 +277,23 @@ export async function collectComposableWorkflowsSignal(
   else if (reposWithComposition.length === 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q38-composable-workflows",
-    questionId: "D7-Q38",
-    score,
-    evidence,
-    confidence: 0.6,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q38",
+      score,
+      evidence,
+      confidence: 0.6,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q39 — Session logging / reproducible traces
- * Score 0: No hook/logging configs found
- * Score 1: Hook config files exist but content is minimal (no preToolUse/postToolUse)
- * Score 2: Hook configs with both preToolUse and postToolUse entries found
- */
+/** Q39 — Session logging / reproducible traces */
 export async function collectSessionLoggingSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q39-session-logging");
   const reposWithHooks: string[] = [];
   const reposWithFullHooks: string[] = [];
 
@@ -309,13 +301,12 @@ export async function collectSessionLoggingSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const hookConfigFiles = paths.filter((p) =>
       HOOK_DIRS.some((dir) => p.startsWith(`${dir}/`) && p.endsWith(".json"))
     );
 
-    // Also check agent files for hook-related keys
     const agentFiles = paths.filter((p) =>
       AGENT_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`))
     );
@@ -323,9 +314,8 @@ export async function collectSessionLoggingSignal(
     let foundHooks = hookConfigFiles.length > 0;
     let foundFullHooks = false;
 
-    // Check hook config files for preToolUse/postToolUse
     for (const filePath of hookConfigFiles) {
-      const content = await safeReadFile(octokit, owner, repo.name, filePath);
+      const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
       if (content) {
         const hasPreToolUse = /preToolUse/i.test(content);
         const hasPostToolUse = /postToolUse/i.test(content);
@@ -336,10 +326,9 @@ export async function collectSessionLoggingSignal(
       }
     }
 
-    // Check agent files for hook-related keys if no dedicated hook files
     if (!foundHooks) {
       for (const filePath of agentFiles) {
-        const content = await safeReadFile(octokit, owner, repo.name, filePath);
+        const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
         if (content && hookKeywords.test(content)) {
           foundHooks = true;
           break;
@@ -373,24 +362,23 @@ export async function collectSessionLoggingSignal(
   else if (reposWithHooks.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q39-session-logging",
-    questionId: "D7-Q39",
-    score,
-    evidence,
-    confidence: 0.65,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q39",
+      score,
+      evidence,
+      confidence: 0.65,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q40 — Human-in-the-loop approval
- * Score 0: No approval gates found
- * Score 1: Some hooks or informal gates found (e.g., postToolUse only)
- * Score 2: Formal preToolUse approval hooks or environment approval gates found
- */
+/** Q40 — Human-in-the-loop approval */
 export async function collectHumanOversightSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q40-human-oversight");
   const reposWithApproval: string[] = [];
   const reposWithFormalApproval: string[] = [];
 
@@ -399,7 +387,7 @@ export async function collectHumanOversightSignal(
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const hookConfigFiles = paths.filter((p) =>
       HOOK_DIRS.some((dir) => p.startsWith(`${dir}/`) && p.endsWith(".json"))
@@ -408,9 +396,8 @@ export async function collectHumanOversightSignal(
     let foundApproval = false;
     let foundFormalApproval = false;
 
-    // Check hook files for approval-related content in preToolUse
     for (const filePath of hookConfigFiles) {
-      const content = await safeReadFile(octokit, owner, repo.name, filePath);
+      const content = await safeReadFile(octokit, owner, repo.name, filePath, ctx);
       if (content) {
         const hasPreToolUse = /preToolUse/i.test(content);
         if (hasPreToolUse && approvalKeywords.test(content)) {
@@ -418,22 +405,19 @@ export async function collectHumanOversightSignal(
           foundApproval = true;
           break;
         }
-        // postToolUse only = informal
         if (/postToolUse/i.test(content)) {
           foundApproval = true;
         }
       }
     }
 
-    // Check workflow files for environment approval gates
     if (!foundFormalApproval) {
       const workflowPaths = paths.filter(
         (p) => p.startsWith(".github/workflows/") && (p.endsWith(".yml") || p.endsWith(".yaml"))
       );
       for (const wfPath of workflowPaths) {
-        const content = await safeReadFile(octokit, owner, repo.name, wfPath);
+        const content = await safeReadFile(octokit, owner, repo.name, wfPath, ctx);
         if (content && environmentGatePattern.test(content)) {
-          // environment: with review rules = formal gate
           foundFormalApproval = true;
           foundApproval = true;
           break;
@@ -469,36 +453,34 @@ export async function collectHumanOversightSignal(
   else if (reposWithApproval.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q40-human-oversight",
-    questionId: "D7-Q40",
-    score,
-    evidence,
-    confidence: 0.6,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q40",
+      score,
+      evidence,
+      confidence: 0.6,
+    },
+    errors: ctx.errors(),
   };
 }
 
-/**
- * Q41 — Versioned & reviewed instructions
- * Score 0: No agent instruction files found
- * Score 1: Agent instruction files exist but no PR review evidence
- * Score 2: Agent instruction file changes have gone through PR review
- */
+/** Q41 — Versioned & reviewed instructions */
 export async function collectVersionedInstructionsSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:repo-scan:q41-versioned-instructions");
   const reposWithInstructions: string[] = [];
   const reposWithPRReview: string[] = [];
 
   const instructionFilePattern = /\.(md|txt|yaml|yml|json)$/i;
   const agentInstructionDirs = [".github/agents", ".claude/agents", "agents"];
 
-  // Compute date threshold for recent PRs (last 30 days)
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const instructionFiles = paths.filter(
       (p) =>
@@ -509,9 +491,9 @@ export async function collectVersionedInstructionsSignal(
     if (instructionFiles.length === 0) continue;
     reposWithInstructions.push(repo.fullName);
 
-    // Look for merged PRs in the last 30 days that touch agent instruction files
+    let prs: Awaited<ReturnType<Octokit["pulls"]["list"]>>["data"] = [];
     try {
-      const { data: prs } = await octokit.pulls.list({
+      const { data } = await octokit.pulls.list({
         owner,
         repo: repo.name,
         state: "closed",
@@ -519,13 +501,19 @@ export async function collectVersionedInstructionsSignal(
         direction: "desc",
         per_page: 30,
       });
+      prs = data;
+    } catch (err) {
+      if (statusOf(err) !== 404) ctx.report(err);
+      continue;
+    }
 
-      const recentMergedPRs = prs.filter(
-        (pr) => pr.merged_at !== null && pr.merged_at !== undefined && pr.merged_at >= thirtyDaysAgo
-      );
+    const recentMergedPRs = prs.filter(
+      (pr) => pr.merged_at !== null && pr.merged_at !== undefined && pr.merged_at >= thirtyDaysAgo
+    );
 
-      let foundPRReview = false;
-      for (const pr of recentMergedPRs) {
+    let foundPRReview = false;
+    for (const pr of recentMergedPRs) {
+      try {
         const { data: prFiles } = await octokit.pulls.listFiles({
           owner,
           repo: repo.name,
@@ -538,13 +526,13 @@ export async function collectVersionedInstructionsSignal(
           foundPRReview = true;
           break;
         }
+      } catch (err) {
+        if (statusOf(err) !== 404) ctx.report(err);
       }
+    }
 
-      if (foundPRReview) {
-        reposWithPRReview.push(repo.fullName);
-      }
-    } catch {
-      // PR lookup failure is non-fatal; keep instruction file evidence
+    if (foundPRReview) {
+      reposWithPRReview.push(repo.fullName);
     }
   }
 
@@ -566,10 +554,13 @@ export async function collectVersionedInstructionsSignal(
   else if (reposWithInstructions.length >= 1) score = 1;
 
   return {
-    signalId: "github:repo-scan:q41-versioned-instructions",
-    questionId: "D7-Q41",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D7-Q41",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }

@@ -68,6 +68,12 @@ vi.mock("@ai-scorecard/adapters", () => {
     async collect(): Promise<SignalResult[]> {
       return fakeGithubSignals;
     }
+    async collectWithDiagnostics(): Promise<{
+      results: SignalResult[];
+      errors: readonly never[];
+    }> {
+      return { results: fakeGithubSignals, errors: [] };
+    }
   }
 
   class AIInferenceEngine {

@@ -5,6 +5,7 @@
 import type { ScorecardResult, QuestionScore } from "@ai-scorecard/core";
 import { questions } from "@ai-scorecard/core";
 import { getUnaddressedQuestions, getLowConfidenceQuestions } from "@ai-scorecard/core";
+import type { CollectorError, CollectorErrorKind } from "@ai-scorecard/adapters";
 
 /** Render a simple progress bar in markdown using Unicode block elements */
 function markdownBar(percentage: number, width = 12): string {
@@ -30,10 +31,33 @@ function formatLowConfidence(qs: QuestionScore): string {
   return `- **${qs.questionId}**: ${text} *(confidence: ${pct}%)*`;
 }
 
+/** Group errors by their `kind` and return counts + first message per group. */
+function groupErrors(
+  errors: readonly CollectorError[]
+): Array<{ kind: CollectorErrorKind; count: number; firstMessage: string }> {
+  const buckets = new Map<CollectorErrorKind, { count: number; firstMessage: string }>();
+  for (const err of errors) {
+    const existing = buckets.get(err.kind);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      buckets.set(err.kind, { count: 1, firstMessage: err.message });
+    }
+  }
+  return Array.from(buckets.entries()).map(([kind, data]) => ({
+    kind,
+    count: data.count,
+    firstMessage: data.firstMessage,
+  }));
+}
+
 /**
  * Render the scorecard result as a Markdown document and print to stdout.
  */
-export function outputMarkdown(result: ScorecardResult): void {
+export function outputMarkdown(
+  result: ScorecardResult,
+  errors: readonly CollectorError[] = []
+): void {
   const lines: string[] = [];
 
   // Header
@@ -65,6 +89,27 @@ export function outputMarkdown(result: ScorecardResult): void {
     );
   }
   lines.push("");
+
+  // Adapter diagnostics — call out auth/rate-limit/etc. so a misconfigured
+  // run is visibly different from a clean low-score run.
+  if (errors.length > 0) {
+    lines.push("## Adapter Diagnostics");
+    lines.push("");
+    const grouped = groupErrors(errors);
+    const hasAuth = grouped.some((g) => g.kind === "auth");
+    if (hasAuth) {
+      lines.push(
+        "> **Warning:** auth-classified errors were reported during this run. The scores above may reflect an under-scoped or invalid token rather than the org's actual maturity."
+      );
+      lines.push("");
+    }
+    lines.push("| Kind | Count | First message |");
+    lines.push("| --- | --- | --- |");
+    for (const g of grouped) {
+      lines.push(`| ${g.kind} | ${g.count} | ${g.firstMessage} |`);
+    }
+    lines.push("");
+  }
 
   // Top Gaps
   const gaps = getUnaddressedQuestions(result).slice(0, 10);

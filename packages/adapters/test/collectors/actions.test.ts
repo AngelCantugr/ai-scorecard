@@ -59,7 +59,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     );
     const octokit = makeOctokit({ runs });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:actions:q14-pipeline-scaling");
     expect(result.questionId).toBe("D3-Q14");
@@ -78,7 +78,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     );
     const octokit = makeOctokit({ runs });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -94,7 +94,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     ];
     const octokit = makeOctokit({ runs });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.data).toMatchObject({ failureRate: 40 });
@@ -104,7 +104,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runs: [] });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No workflow runs");
@@ -114,7 +114,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runsError: makeOctokitError(401, "Bad credentials") });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     // fetchWorkflowRuns catches all errors → []. Once PR3 lands, expect typed propagation.
     expect(result.score).toBe(0);
@@ -125,7 +125,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runsError: makeOctokitError(429, "Rate limited") });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -134,7 +134,7 @@ describe("collectPipelineScalingSignal — Q14", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runsError: makeOctokitError(500, "Server Error") });
 
-    const result = await collectPipelineScalingSignal(octokit as never, [repo]);
+    const { result } = await collectPipelineScalingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -150,7 +150,7 @@ describe("collectTestQualitySignal — Q17", () => {
     ];
     const octokit = makeOctokit({ runs });
 
-    const result = await collectTestQualitySignal(octokit as never, [repo]);
+    const { result } = await collectTestQualitySignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:actions:q17-test-quality");
     expect(result.questionId).toBe("D3-Q17");
@@ -161,7 +161,7 @@ describe("collectTestQualitySignal — Q17", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runs: [makeRun({ id: 1, name: "lint" })] });
 
-    const result = await collectTestQualitySignal(octokit as never, [repo]);
+    const { result } = await collectTestQualitySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No test workflows");
@@ -171,7 +171,7 @@ describe("collectTestQualitySignal — Q17", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ runsError: makeOctokitError(500, "Server Error") });
 
-    const result = await collectTestQualitySignal(octokit as never, [repo]);
+    const { result } = await collectTestQualitySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });

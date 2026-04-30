@@ -101,7 +101,7 @@ describe("collectAgentTaskPercentSignal — Q13", () => {
     }
     const octokit = makeOctokit({ prs, commitsByPR });
 
-    const result = await collectAgentTaskPercentSignal(octokit as never, [repo]);
+    const { result } = await collectAgentTaskPercentSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:pr-analytics:q13-agent-task-percent");
     expect(result.questionId).toBe("D2-Q13");
@@ -121,7 +121,7 @@ describe("collectAgentTaskPercentSignal — Q13", () => {
     };
     const octokit = makeOctokit({ prs, commitsByPR });
 
-    const result = await collectAgentTaskPercentSignal(octokit as never, [repo]);
+    const { result } = await collectAgentTaskPercentSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -131,7 +131,7 @@ describe("collectAgentTaskPercentSignal — Q13", () => {
     const prs = [buildPR({ number: 1 })];
     const octokit = makeOctokit({ prs });
 
-    const result = await collectAgentTaskPercentSignal(octokit as never, [repo]);
+    const { result } = await collectAgentTaskPercentSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -140,7 +140,7 @@ describe("collectAgentTaskPercentSignal — Q13", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prsError: makeOctokitError(401, "Bad credentials") });
 
-    const result = await collectAgentTaskPercentSignal(octokit as never, [repo]);
+    const { result } = await collectAgentTaskPercentSignal(octokit as never, [repo]);
 
     // Today: fetchRecentPRs catches all errors and returns []. Once PR3 lands,
     // a typed AuthenticationError should propagate instead.
@@ -152,7 +152,7 @@ describe("collectAgentTaskPercentSignal — Q13", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prsError: makeOctokitError(429, "Rate limited") });
 
-    const result = await collectAgentTaskPercentSignal(octokit as never, [repo]);
+    const { result } = await collectAgentTaskPercentSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.confidence).toBe(0.4);
@@ -169,7 +169,7 @@ describe("collectAICodeReviewSignal — Q16", () => {
     }
     const octokit = makeOctokit({ prs, reviewsByPR });
 
-    const result = await collectAICodeReviewSignal(octokit as never, [repo]);
+    const { result } = await collectAICodeReviewSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:pr-analytics:q16-ai-code-review");
     expect(result.questionId).toBe("D3-Q16");
@@ -185,7 +185,7 @@ describe("collectAICodeReviewSignal — Q16", () => {
     const reviewsByPR = { 1: [{ user: { login: "snyk-bot" }, body: "vuln found" }] };
     const octokit = makeOctokit({ prs, reviewsByPR });
 
-    const result = await collectAICodeReviewSignal(octokit as never, [repo]);
+    const { result } = await collectAICodeReviewSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -196,7 +196,7 @@ describe("collectAICodeReviewSignal — Q16", () => {
     const reviewsByPR = { 1: [{ user: { login: "alice" }, body: "LGTM" }] };
     const octokit = makeOctokit({ prs, reviewsByPR });
 
-    const result = await collectAICodeReviewSignal(octokit as never, [repo]);
+    const { result } = await collectAICodeReviewSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -205,7 +205,7 @@ describe("collectAICodeReviewSignal — Q16", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prsError: makeOctokitError(500, "Server Error") });
 
-    const result = await collectAICodeReviewSignal(octokit as never, [repo]);
+    const { result } = await collectAICodeReviewSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -219,7 +219,7 @@ describe("collectPRCycleTimeSignal — Q18", () => {
     );
     const octokit = makeOctokit({ prs });
 
-    const result = await collectPRCycleTimeSignal(octokit as never, [repo]);
+    const { result } = await collectPRCycleTimeSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:pr-analytics:q18-pr-cycle-time");
     expect(result.score).toBe(2);
@@ -231,7 +231,7 @@ describe("collectPRCycleTimeSignal — Q18", () => {
     const prs = Array.from({ length: 3 }, (_, i) => buildPR({ number: i + 1 }));
     const octokit = makeOctokit({ prs });
 
-    const result = await collectPRCycleTimeSignal(octokit as never, [repo]);
+    const { result } = await collectPRCycleTimeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -240,7 +240,7 @@ describe("collectPRCycleTimeSignal — Q18", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prs: [] });
 
-    const result = await collectPRCycleTimeSignal(octokit as never, [repo]);
+    const { result } = await collectPRCycleTimeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -249,7 +249,7 @@ describe("collectPRCycleTimeSignal — Q18", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prsError: makeOctokitError(404, "Not Found") });
 
-    const result = await collectPRCycleTimeSignal(octokit as never, [repo]);
+    const { result } = await collectPRCycleTimeSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -264,7 +264,7 @@ describe("collectAIArtifactSDLCSignal — Q20", () => {
       filesByPR: { 1: [{ filename: "CLAUDE.md" }, { filename: "src/index.ts" }] },
     });
 
-    const result = await collectAIArtifactSDLCSignal(octokit as never, repos);
+    const { result } = await collectAIArtifactSDLCSignal(octokit as never, repos);
 
     expect(result.score).toBe(2);
     expect(result.evidence[0]?.data).toMatchObject({
@@ -281,7 +281,7 @@ describe("collectAIArtifactSDLCSignal — Q20", () => {
       ],
     });
 
-    const result = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
+    const { result } = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
     expect(result.evidence[0]?.data).toMatchObject({
@@ -296,7 +296,7 @@ describe("collectAIArtifactSDLCSignal — Q20", () => {
       filesByPR: { 1: [{ filename: "src/index.ts" }] },
     });
 
-    const result = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
+    const { result } = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -305,7 +305,7 @@ describe("collectAIArtifactSDLCSignal — Q20", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ prsError: makeOctokitError(401, "Bad credentials") });
 
-    const result = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
+    const { result } = await collectAIArtifactSDLCSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -322,7 +322,7 @@ describe("collectAIAttributionSignal — Q23", () => {
     }));
     const octokit = makeOctokit({ commits });
 
-    const result = await collectAIAttributionSignal(octokit as never, [repo]);
+    const { result } = await collectAIAttributionSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
   });
@@ -335,7 +335,7 @@ describe("collectAIAttributionSignal — Q23", () => {
     ];
     const octokit = makeOctokit({ commits });
 
-    const result = await collectAIAttributionSignal(octokit as never, [repo]);
+    const { result } = await collectAIAttributionSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -345,7 +345,7 @@ describe("collectAIAttributionSignal — Q23", () => {
     const commits = [{ commit: { message: "feat: regular work" } }];
     const octokit = makeOctokit({ commits });
 
-    const result = await collectAIAttributionSignal(octokit as never, [repo]);
+    const { result } = await collectAIAttributionSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -366,7 +366,7 @@ describe("collectAIAttributionSignal — Q23", () => {
       git: { getTree: vi.fn().mockResolvedValue({ data: { tree: [] } }) },
     };
 
-    const result = await collectAIAttributionSignal(octokit as never, [repo]);
+    const { result } = await collectAIAttributionSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });

@@ -53,7 +53,7 @@ describe("collectGatewaySignal — Q1", () => {
     const repo = makeRepo("ai-gateway");
     const octokit = makeOctokit({ treePaths: ["litellm.yaml", "src/index.ts"] });
 
-    const result = await collectGatewaySignal(octokit as never, [repo]);
+    const { result } = await collectGatewaySignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q1-gateway");
     expect(result.questionId).toBe("D1-Q1");
@@ -68,7 +68,7 @@ describe("collectGatewaySignal — Q1", () => {
     const repos = [makeRepo("svc-a"), makeRepo("svc-b")];
     const octokit = makeOctokit({ treePaths: ["litellm.yaml"] });
 
-    const result = await collectGatewaySignal(octokit as never, repos);
+    const { result } = await collectGatewaySignal(octokit as never, repos);
 
     expect(result.score).toBe(1);
   });
@@ -77,7 +77,7 @@ describe("collectGatewaySignal — Q1", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts", "package.json"] });
 
-    const result = await collectGatewaySignal(octokit as never, [repo]);
+    const { result } = await collectGatewaySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No AI gateway");
@@ -87,7 +87,7 @@ describe("collectGatewaySignal — Q1", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(404, "Not Found") });
 
-    const result = await collectGatewaySignal(octokit as never, [repo]);
+    const { result } = await collectGatewaySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     // TODO(reliability): once PR3 (typed-error propagation) lands, expect a typed error
@@ -98,16 +98,20 @@ describe("collectGatewaySignal — Q1", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(403, "Forbidden") });
 
-    const result = await collectGatewaySignal(octokit as never, [repo]);
+    const { result } = await collectGatewaySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
 
-  it("error path: propagates unexpected errors (non-404/403)", async () => {
+  it("error path: classifies unexpected errors (non-404/403) into the outcome", async () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(500, "Server Error") });
 
-    await expect(collectGatewaySignal(octokit as never, [repo])).rejects.toThrow();
+    const { errors } = await collectGatewaySignal(octokit as never, [repo]);
+
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.kind).toBe("unexpected");
+    expect(errors[0]?.message).toContain("Server Error");
   });
 });
 
@@ -116,7 +120,7 @@ describe("collectPromptManagementSignal — Q5", () => {
     const repos = [makeRepo("a"), makeRepo("b"), makeRepo("c")];
     const octokit = makeOctokit({ treePaths: ["prompts/system.txt"] });
 
-    const result = await collectPromptManagementSignal(octokit as never, repos);
+    const { result } = await collectPromptManagementSignal(octokit as never, repos);
 
     expect(result.signalId).toBe("github:repo-scan:q5-prompt-management");
     expect(result.questionId).toBe("D1-Q5");
@@ -127,7 +131,7 @@ describe("collectPromptManagementSignal — Q5", () => {
     const repos = [makeRepo("a"), makeRepo("b")];
     const octokit = makeOctokit({ treePaths: ["templates/welcome.md"] });
 
-    const result = await collectPromptManagementSignal(octokit as never, repos);
+    const { result } = await collectPromptManagementSignal(octokit as never, repos);
 
     expect(result.score).toBe(1);
   });
@@ -136,7 +140,7 @@ describe("collectPromptManagementSignal — Q5", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectPromptManagementSignal(octokit as never, [repo]);
+    const { result } = await collectPromptManagementSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -145,7 +149,7 @@ describe("collectPromptManagementSignal — Q5", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(404, "Not Found") });
 
-    const result = await collectPromptManagementSignal(octokit as never, [repo]);
+    const { result } = await collectPromptManagementSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -160,7 +164,7 @@ describe("collectSteeringFilesSignal — Q7", () => {
       repos: { getContent: vi.fn() },
     };
 
-    const result = await collectSteeringFilesSignal(octokit as never, [repo]);
+    const { result } = await collectSteeringFilesSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q7-steering-files");
     expect(result.questionId).toBe("D2-Q7");
@@ -191,7 +195,7 @@ describe("collectSteeringFilesSignal — Q7", () => {
       repos: { getContent: vi.fn() },
     };
 
-    const result = await collectSteeringFilesSignal(octokit as never, repos);
+    const { result } = await collectSteeringFilesSignal(octokit as never, repos);
 
     expect(result.score).toBe(1);
   });
@@ -200,20 +204,21 @@ describe("collectSteeringFilesSignal — Q7", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectSteeringFilesSignal(octokit as never, [repo]);
+    const { result } = await collectSteeringFilesSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No AI steering files");
   });
 
-  it("error path: 401 unauthorized propagates (auth failure is not silently swallowed)", async () => {
+  it("error path: 401 unauthorized is reported as a typed auth error (not silently swallowed)", async () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(401, "Bad credentials") });
 
-    await expect(collectSteeringFilesSignal(octokit as never, [repo])).rejects.toThrow();
-    // TODO(reliability): once PR3 lands, the adapter should propagate a typed
-    // AuthenticationError. Today an HTTP error with status 401 bubbles up as-is,
-    // which is the legacy behavior asserted here.
+    const { errors } = await collectSteeringFilesSignal(octokit as never, [repo]);
+
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.kind).toBe("auth");
+    expect(errors[0]?.message).toContain("Bad credentials");
   });
 });
 
@@ -233,7 +238,7 @@ describe("collectAIRulesSignal — Q8", () => {
       },
     };
 
-    const result = await collectAIRulesSignal(octokit as never, [repo]);
+    const { result } = await collectAIRulesSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q8-ai-rules");
     expect(result.questionId).toBe("D2-Q8");
@@ -258,7 +263,7 @@ describe("collectAIRulesSignal — Q8", () => {
       },
     });
 
-    const result = await collectAIRulesSignal(octokit as never, [repo]);
+    const { result } = await collectAIRulesSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -267,7 +272,7 @@ describe("collectAIRulesSignal — Q8", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectAIRulesSignal(octokit as never, [repo]);
+    const { result } = await collectAIRulesSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -285,7 +290,7 @@ describe("collectAIRulesSignal — Q8", () => {
       },
     };
 
-    const result = await collectAIRulesSignal(octokit as never, [repo]);
+    const { result } = await collectAIRulesSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.summary).toContain("No AI rule files");
@@ -299,7 +304,7 @@ describe("collectPromptSecuritySignal — Q21", () => {
       treePaths: ["prompts/system.txt", "prompts/user.txt", "src/server.ts"],
     });
 
-    const result = await collectPromptSecuritySignal(octokit as never, [repo]);
+    const { result } = await collectPromptSecuritySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(2);
     expect(result.evidence[0]?.data).toMatchObject({
@@ -314,7 +319,7 @@ describe("collectPromptSecuritySignal — Q21", () => {
       treePaths: ["public/prompts/system.txt", "src/index.ts"],
     });
 
-    const result = await collectPromptSecuritySignal(octokit as never, [repo]);
+    const { result } = await collectPromptSecuritySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
     expect(result.evidence[0]?.data).toMatchObject({
@@ -326,7 +331,7 @@ describe("collectPromptSecuritySignal — Q21", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treeError: makeOctokitError(404, "Not Found") });
 
-    const result = await collectPromptSecuritySignal(octokit as never, [repo]);
+    const { result } = await collectPromptSecuritySignal(octokit as never, [repo]);
 
     // 404 → empty paths → no client exposure, no server prompts, but repo exists in input → score 1
     expect(result.score).toBe(1);
@@ -338,7 +343,7 @@ describe("collectTracingSignal — Q25", () => {
     const repos = [makeRepo("a"), makeRepo("b")];
     const octokit = makeOctokit({ treePaths: ["opentelemetry.yaml"] });
 
-    const result = await collectTracingSignal(octokit as never, repos);
+    const { result } = await collectTracingSignal(octokit as never, repos);
 
     expect(result.signalId).toBe("github:repo-scan:q25-tracing");
     expect(result.score).toBe(2);
@@ -360,7 +365,7 @@ describe("collectTracingSignal — Q25", () => {
       },
     });
 
-    const result = await collectTracingSignal(octokit as never, [repo]);
+    const { result } = await collectTracingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -369,7 +374,7 @@ describe("collectTracingSignal — Q25", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectTracingSignal(octokit as never, [repo]);
+    const { result } = await collectTracingSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -380,7 +385,7 @@ describe("collectDocumentationSignal — Q31", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["openapi.yaml", "src/index.ts", "src/types.d.ts"] });
 
-    const result = await collectDocumentationSignal(octokit as never, [repo]);
+    const { result } = await collectDocumentationSignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q31-ai-friendly-docs");
     expect(result.score).toBe(2);
@@ -390,7 +395,7 @@ describe("collectDocumentationSignal — Q31", () => {
     const repos = [makeRepo("a"), makeRepo("b")];
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectDocumentationSignal(octokit as never, repos);
+    const { result } = await collectDocumentationSignal(octokit as never, repos);
 
     expect(result.score).toBe(1);
   });
@@ -399,7 +404,7 @@ describe("collectDocumentationSignal — Q31", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.js", "README.md"] });
 
-    const result = await collectDocumentationSignal(octokit as never, [repo]);
+    const { result } = await collectDocumentationSignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -421,7 +426,7 @@ describe("collectSpecAccuracySignal — Q32", () => {
       },
     });
 
-    const result = await collectSpecAccuracySignal(octokit as never, [repo]);
+    const { result } = await collectSpecAccuracySignal(octokit as never, [repo]);
 
     expect(result.signalId).toBe("github:repo-scan:q32-spec-accuracy");
     expect(result.score).toBe(2);
@@ -434,7 +439,7 @@ describe("collectSpecAccuracySignal — Q32", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["openapi.yaml"] });
 
-    const result = await collectSpecAccuracySignal(octokit as never, [repo]);
+    const { result } = await collectSpecAccuracySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(1);
   });
@@ -443,7 +448,7 @@ describe("collectSpecAccuracySignal — Q32", () => {
     const repo = makeRepo();
     const octokit = makeOctokit({ treePaths: ["src/index.ts"] });
 
-    const result = await collectSpecAccuracySignal(octokit as never, [repo]);
+    const { result } = await collectSpecAccuracySignal(octokit as never, [repo]);
 
     expect(result.score).toBe(0);
   });
@@ -466,7 +471,7 @@ describe("collectSpecAccuracySignal — Q32", () => {
       },
     };
 
-    const result = await collectSpecAccuracySignal(octokit as never, [repo]);
+    const { result } = await collectSpecAccuracySignal(octokit as never, [repo]);
 
     // Spec exists but CI validation cannot be confirmed → score 1 (not 2, not crash)
     expect(result.score).toBe(1);

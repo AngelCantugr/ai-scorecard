@@ -1,57 +1,36 @@
 import type { Octokit } from "@octokit/rest";
 import type { SignalResult, Evidence } from "@ai-scorecard/core";
 import type { RepoInfo } from "./repo-scan.js";
+import {
+  createCollectorContext,
+  type CollectorContext,
+  type CollectorOutcome,
+} from "../collector-error.js";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/**
- * Known eval framework package names (npm / pip) whose presence in a
- * dependency manifest signals an automated evaluation practice.
- */
 const EVAL_FRAMEWORK_DEPS = [
-  // LangSmith
   "langsmith",
-  // Braintrust
   "braintrust",
-  // Arize Phoenix
   "arize-phoenix",
   "arize",
   "@arizeai/openinference-core",
-  // OpenTelemetry GenAI semantic conventions
   "@opentelemetry/instrumentation-openai",
   "opentelemetry-instrumentation-openai",
   "opentelemetry-semantic-conventions-ai",
-  // openai-evals / OpenAI Evals
   "openai-evals",
   "evals",
-  // deepeval
   "deepeval",
-  // promptfoo
   "promptfoo",
-  // RAGAS
   "ragas",
-  // trulens
   "trulens-eval",
   "trulens",
-  // Promptlayer
   "promptlayer",
 ];
 
-/**
- * Regex that matches any eval-framework identifier inside a manifest file.
- * Tested against the raw file content (package.json or pyproject.toml).
- */
 const EVAL_DEP_PATTERN = new RegExp(
   EVAL_FRAMEWORK_DEPS.map((d) => d.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
   "i"
 );
 
-/**
- * Eval CLI invocation patterns to look for in CI workflow YAML files.
- * These indicate that eval runs are wired into CI pipelines.
- */
 const EVAL_CI_PATTERNS = [
   /langsmith/i,
   /braintrust\s+eval/i,
@@ -68,20 +47,20 @@ const EVAL_CI_PATTERNS = [
   /run.*benchmark/i,
 ];
 
-/**
- * Directories whose presence indicates version-controlled eval datasets.
- */
 const EVAL_DATASET_DIRS = ["evals", "eval", "tests/eval", "golden", "goldens"];
 
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
+function statusOf(err: unknown): number | undefined {
+  if (err === null || typeof err !== "object") return undefined;
+  const s = (err as { status?: unknown }).status;
+  return typeof s === "number" ? s : undefined;
+}
 
 async function fetchRepoFilePaths(
   octokit: Octokit,
   owner: string,
   repo: string,
-  defaultBranch: string
+  defaultBranch: string,
+  ctx: CollectorContext
 ): Promise<string[]> {
   try {
     const { data } = await octokit.git.getTree({
@@ -95,12 +74,9 @@ async function fetchRepoFilePaths(
       .map((item) => item.path ?? "")
       .filter(Boolean);
   } catch (err) {
-    const status =
-      err !== null && typeof err === "object" && "status" in err
-        ? (err as { status: number }).status
-        : undefined;
-    if (status === 404 || status === 403) return [];
-    throw err;
+    if (statusOf(err) === 404) return [];
+    ctx.report(err);
+    return [];
   }
 }
 
@@ -108,7 +84,8 @@ async function safeReadFile(
   octokit: Octokit,
   owner: string,
   repo: string,
-  path: string
+  path: string,
+  ctx: CollectorContext
 ): Promise<string | null> {
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path });
@@ -116,45 +93,36 @@ async function safeReadFile(
       return Buffer.from(data.content, "base64").toString("utf-8");
     }
     return null;
-  } catch {
+  } catch (err) {
+    if (statusOf(err) === 404) return null;
+    ctx.report(err);
     return null;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Q42 — Automated eval framework
-// ---------------------------------------------------------------------------
-
-/**
- * Q42 — Is there an automated evaluation framework to measure AI output quality?
- *
- * Score 0: No eval framework deps or CI eval steps found.
- * Score 1: Eval framework dep present in at least one repo, but no CI integration.
- * Score 2: Eval framework dep present AND at least one CI workflow runs the eval suite.
- */
+/** Q42 — Automated eval framework */
 export async function collectEvalFrameworkSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:eval:q42-eval-framework");
   const reposWithDeps: string[] = [];
   const reposWithCIIntegration: string[] = [];
   const detectedFrameworks: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
-    // 1. Check manifest files for eval framework deps
     const manifestPaths = paths.filter(
       (p) => p === "package.json" || p === "pyproject.toml" || p === "requirements.txt"
     );
 
     let foundDep = false;
     for (const manifestPath of manifestPaths) {
-      const content = await safeReadFile(octokit, owner, repo.name, manifestPath);
+      const content = await safeReadFile(octokit, owner, repo.name, manifestPath, ctx);
       if (content && EVAL_DEP_PATTERN.test(content)) {
         foundDep = true;
-        // Record which frameworks matched
         for (const dep of EVAL_FRAMEWORK_DEPS) {
           if (new RegExp(dep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(content)) {
             if (!detectedFrameworks.includes(dep)) detectedFrameworks.push(dep);
@@ -166,14 +134,13 @@ export async function collectEvalFrameworkSignal(
 
     if (foundDep) reposWithDeps.push(repo.fullName);
 
-    // 2. Check CI workflows for eval invocations
     const workflowPaths = paths.filter(
       (p) => p.startsWith(".github/workflows/") && (p.endsWith(".yml") || p.endsWith(".yaml"))
     );
 
     let foundCIEval = false;
     for (const wfPath of workflowPaths) {
-      const content = await safeReadFile(octokit, owner, repo.name, wfPath);
+      const content = await safeReadFile(octokit, owner, repo.name, wfPath, ctx);
       if (content && EVAL_CI_PATTERNS.some((rx) => rx.test(content))) {
         foundCIEval = true;
         break;
@@ -206,35 +173,29 @@ export async function collectEvalFrameworkSignal(
   else if (reposWithDeps.length >= 1) score = 1;
 
   return {
-    signalId: "github:eval:q42-eval-framework",
-    questionId: "D8-Q42",
-    score,
-    evidence,
-    confidence: 0.75,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D8-Q42",
+      score,
+      evidence,
+      confidence: 0.75,
+    },
+    errors: ctx.errors(),
   };
 }
 
-// ---------------------------------------------------------------------------
-// Q44 — Eval datasets in version control
-// ---------------------------------------------------------------------------
-
-/**
- * Q44 — Are evaluation datasets maintained in version control with clear ownership?
- *
- * Score 0: No eval dataset directories found.
- * Score 1: Eval dataset directories exist in at least one repo.
- * Score 2: Eval dataset directories found in 2+ repos (suggests org-wide practice).
- */
+/** Q44 — Eval datasets in version control */
 export async function collectEvalDatasetSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:eval:q44-eval-datasets");
   const reposWithDatasets: string[] = [];
   const datasetDirsByRepo: Record<string, string[]> = {};
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
     const foundDirs = EVAL_DATASET_DIRS.filter((dir) =>
       paths.some((p) => p === dir || p.startsWith(`${dir}/`))
@@ -262,45 +223,37 @@ export async function collectEvalDatasetSignal(
   else if (reposWithDatasets.length === 1) score = 1;
 
   return {
-    signalId: "github:eval:q44-eval-datasets",
-    questionId: "D8-Q44",
-    score,
-    evidence,
-    confidence: 0.7,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D8-Q44",
+      score,
+      evidence,
+      confidence: 0.7,
+    },
+    errors: ctx.errors(),
   };
 }
 
-// ---------------------------------------------------------------------------
-// Q45 — Benchmark suite for model promotion
-// ---------------------------------------------------------------------------
-
-/**
- * Q45 — Is there a benchmark suite used to compare model versions before promotion?
- *
- * Score 0: No benchmark CI steps and no eval-related branch-protection status checks.
- * Score 1: Benchmark/eval CI steps exist but are not enforced as branch-protection gates.
- * Score 2: Eval status checks are referenced in branch-protection rules, indicating
- *          that model promotion is gated on benchmark results.
- */
+/** Q45 — Benchmark suite for model promotion */
 export async function collectBenchmarkSuiteSignal(
   octokit: Octokit,
   repos: RepoInfo[]
-): Promise<SignalResult> {
+): Promise<CollectorOutcome<SignalResult>> {
+  const ctx = createCollectorContext("github:eval:q45-benchmark-suite");
   const reposWithBenchmarkCI: string[] = [];
   const reposWithBranchProtection: string[] = [];
 
   for (const repo of repos) {
     const owner = repo.fullName.split("/")[0] ?? "";
-    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch);
+    const paths = await fetchRepoFilePaths(octokit, owner, repo.name, repo.defaultBranch, ctx);
 
-    // 1. Check CI workflows for benchmark / eval invocations
     const workflowPaths = paths.filter(
       (p) => p.startsWith(".github/workflows/") && (p.endsWith(".yml") || p.endsWith(".yaml"))
     );
 
     let foundBenchmarkCI = false;
     for (const wfPath of workflowPaths) {
-      const content = await safeReadFile(octokit, owner, repo.name, wfPath);
+      const content = await safeReadFile(octokit, owner, repo.name, wfPath, ctx);
       if (content && EVAL_CI_PATTERNS.some((rx) => rx.test(content))) {
         foundBenchmarkCI = true;
         break;
@@ -309,7 +262,9 @@ export async function collectBenchmarkSuiteSignal(
 
     if (foundBenchmarkCI) reposWithBenchmarkCI.push(repo.fullName);
 
-    // 2. Check branch-protection rules for eval status checks
+    // 404 (no protection rules) and 403 (token lacks admin) are both expected
+    // outcomes of probing branch protection on every repo — neither indicates
+    // a misconfigured run, so we don't surface them.
     try {
       const { data: branch } = await octokit.repos.getBranch({
         owner,
@@ -324,9 +279,9 @@ export async function collectBenchmarkSuiteSignal(
       );
 
       if (hasEvalCheck) reposWithBranchProtection.push(repo.fullName);
-    } catch {
-      // Branch protection API may return 404 for repos without branch protection
-      // or 403 when the token lacks admin access — both are non-fatal.
+    } catch (err) {
+      const status = statusOf(err);
+      if (status !== 404 && status !== 403) ctx.report(err);
     }
   }
 
@@ -352,10 +307,13 @@ export async function collectBenchmarkSuiteSignal(
   else if (reposWithBenchmarkCI.length >= 1) score = 1;
 
   return {
-    signalId: "github:eval:q45-benchmark-suite",
-    questionId: "D8-Q45",
-    score,
-    evidence,
-    confidence: 0.65,
+    result: {
+      signalId: ctx.signalId,
+      questionId: "D8-Q45",
+      score,
+      evidence,
+      confidence: 0.65,
+    },
+    errors: ctx.errors(),
   };
 }
