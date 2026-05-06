@@ -17,9 +17,14 @@ export interface CliConfig {
     maxRepos?: number;
   };
   ai?: {
+    /** "anthropic" or "ollama" */
     provider?: string;
+    /** Anthropic API key (only meaningful when provider=anthropic) */
     apiKey?: string;
+    /** Model name; default depends on provider */
     model?: string;
+    /** Ollama base URL (only meaningful when provider=ollama) */
+    baseUrl?: string;
   };
   output?: "table" | "json" | "markdown";
 }
@@ -50,6 +55,7 @@ export function loadConfig(): CliConfig {
       ai: {
         ...(cwdConfig.ai.provider !== undefined && { provider: cwdConfig.ai.provider }),
         ...(cwdConfig.ai.model !== undefined && { model: cwdConfig.ai.model }),
+        ...(cwdConfig.ai.baseUrl !== undefined && { baseUrl: cwdConfig.ai.baseUrl }),
       },
     }),
   };

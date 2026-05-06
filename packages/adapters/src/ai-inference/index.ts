@@ -1,11 +1,12 @@
 /**
  * AI Inference Engine
  *
- * Uses an LLM (Anthropic Claude by default) to analyze repository contents and
- * score questions that cannot be directly measured by the GitHub adapter.
+ * Uses an LLM (Anthropic Claude by default, Ollama for local inference) to
+ * analyze repository contents and score questions that cannot be directly
+ * measured by the GitHub adapter. The engine is provider-blind — all
+ * provider-specific logic lives in clients/* behind the LLMClient interface.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
 import type { SignalResult } from "@ai-scorecard/core";
 import type {
   AIInferenceConfig,
@@ -14,6 +15,8 @@ import type {
   ContentBundle,
   TokenUsage,
 } from "./types.js";
+import type { LLMClient } from "./clients/types.js";
+import { createLLMClient } from "./clients/factory.js";
 import { buildPolicyAnalysisPrompt } from "./prompts/policy-analysis.js";
 import { buildArchitectureAnalysisPrompt } from "./prompts/architecture-analysis.js";
 import { buildDocumentationAnalysisPrompt } from "./prompts/documentation-analysis.js";
@@ -21,8 +24,11 @@ import { buildGovernanceAnalysisPrompt } from "./prompts/governance-analysis.js"
 import { buildAgentAnalysisPrompt } from "./prompts/agent-analysis.js";
 import { buildEvalAnalysisPrompt } from "./prompts/eval-analysis.js";
 
-/** Default model to use when none is specified */
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+/** Default models per provider — applied when config.model is unset. */
+const DEFAULT_MODEL_BY_PROVIDER = {
+  anthropic: "claude-sonnet-4-6",
+  ollama: "llama3.1",
+} as const;
 /** Default max tokens per request */
 const DEFAULT_MAX_TOKENS = 4096;
 /** Signal ID prefix for AI-inferred signals */
@@ -51,12 +57,12 @@ export const AI_INFERENCE_QUESTION_IDS: ReadonlyArray<string> =
  */
 export class AIInferenceEngine {
   private readonly config: AIInferenceConfig;
-  private readonly client: Anthropic | null;
+  private readonly client: LLMClient | null;
 
   constructor(config: AIInferenceConfig) {
     this.config = config;
     // Only instantiate the client when not in dry-run mode
-    this.client = config.dryRun ? null : new Anthropic({ apiKey: config.apiKey });
+    this.client = config.dryRun ? null : createLLMClient(config);
   }
 
   /**
@@ -64,7 +70,7 @@ export class AIInferenceEngine {
    * When dryRun is enabled, logs the analysis plan and returns empty results.
    */
   async analyze(bundle: ContentBundle): Promise<SignalResult[]> {
-    const model = this.config.model ?? DEFAULT_MODEL;
+    const model = this.config.model ?? DEFAULT_MODEL_BY_PROVIDER[this.config.provider];
     const maxTokens = this.config.maxTokens ?? DEFAULT_MAX_TOKENS;
 
     if (this.config.dryRun) {
@@ -101,38 +107,39 @@ export class AIInferenceEngine {
     maxTokens: number
   ): Promise<BatchAnalysisResult> {
     if (!this.client) {
-      throw new Error("Anthropic client is not initialized (dry-run mode)");
+      throw new Error("LLM client is not initialized (dry-run mode)");
     }
 
     let rawText = "";
     let tokenUsage: TokenUsage | undefined;
 
     try {
-      const message = await this.client.messages.create({
-        model,
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }],
-      });
+      const response = await this.client.complete({ model, maxTokens, prompt });
+      rawText = response.text;
+      tokenUsage = response.tokenUsage;
 
-      tokenUsage = {
-        inputTokens: message.usage.input_tokens,
-        outputTokens: message.usage.output_tokens,
-      };
-
-      console.log(
-        `[ai-inference] ${analysisType}: ${tokenUsage.inputTokens} input tokens, ` +
-          `${tokenUsage.outputTokens} output tokens`
-      );
-
-      const textBlock = message.content.find((block) => block.type === "text");
-      rawText = textBlock?.type === "text" ? textBlock.text : "";
+      if (tokenUsage) {
+        console.log(
+          `[ai-inference] ${analysisType}: ${tokenUsage.inputTokens} input tokens, ` +
+            `${tokenUsage.outputTokens} output tokens`
+        );
+      } else {
+        // Some providers (e.g., Ollama with cached responses) don't report
+        // token counts. Log the call without numbers so the trace stays useful.
+        console.log(`[ai-inference] ${analysisType}: completed (token usage unavailable)`);
+      }
     } catch (error) {
       console.error(`[ai-inference] Error in ${analysisType} batch:`, error);
       return { analysisType, results: this.fallbackResults(analysisType), error: true };
     }
 
     const { results, error: parseError } = this.parseAnalysisResults(rawText, analysisType);
-    return { analysisType, results, tokenUsage, ...(parseError && { error: true }) };
+    return {
+      analysisType,
+      results,
+      ...(tokenUsage && { tokenUsage }),
+      ...(parseError && { error: true }),
+    };
   }
 
   /**
@@ -245,6 +252,10 @@ export class AIInferenceEngine {
   /** Log the dry-run analysis plan without making API calls */
   private logDryRun(bundle: ContentBundle, model: string, maxTokens: number): void {
     console.log(`[ai-inference] DRY RUN — source: ${bundle.source}`);
+    console.log(`[ai-inference] Provider: ${this.config.provider}`);
+    if (this.config.provider === "ollama") {
+      console.log(`[ai-inference] Ollama URL: ${this.config.baseUrl ?? "http://localhost:11434"}`);
+    }
     console.log(`[ai-inference] Model: ${model}, maxTokens: ${maxTokens}`);
     console.log(`[ai-inference] Files: ${bundle.files.length} file(s)`);
     for (const file of bundle.files) {

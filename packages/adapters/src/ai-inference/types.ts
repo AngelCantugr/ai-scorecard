@@ -1,12 +1,15 @@
 /**
  * AI-specific types for the AI Inference Engine.
+ *
+ * AIInferenceConfig is a discriminated union over `provider`. Each provider
+ * carries only the fields it needs — TypeScript prevents mixing (e.g., setting
+ * an `apiKey` when using Ollama, which doesn't authenticate).
  */
 
-/** Configuration for the AI Inference Engine */
-export interface AIInferenceConfig {
-  /** LLM provider (start with Anthropic Claude) */
+/** Anthropic-backed inference (default). Requires an API key. */
+export interface AnthropicInferenceConfig {
   provider: "anthropic";
-  /** API key for the LLM provider */
+  /** API key for the Anthropic API */
   apiKey: string;
   /** Model to use (default: claude-sonnet-4-6) */
   model?: string;
@@ -15,6 +18,22 @@ export interface AIInferenceConfig {
   /** When true, shows what would be analyzed without making API calls */
   dryRun?: boolean;
 }
+
+/** Ollama-backed inference (local or self-hosted). No API key required. */
+export interface OllamaInferenceConfig {
+  provider: "ollama";
+  /** Base URL of the Ollama server (default: http://localhost:11434) */
+  baseUrl?: string;
+  /** Model to use (default: llama3.1) */
+  model?: string;
+  /** Maximum tokens per analysis request */
+  maxTokens?: number;
+  /** When true, shows what would be analyzed without making API calls */
+  dryRun?: boolean;
+}
+
+/** Configuration for the AI Inference Engine. */
+export type AIInferenceConfig = AnthropicInferenceConfig | OllamaInferenceConfig;
 
 /** A bundle of files and metadata to be analyzed by the AI inference engine */
 export interface ContentBundle {

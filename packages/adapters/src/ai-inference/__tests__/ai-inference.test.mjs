@@ -16,11 +16,11 @@ function makeBundle(source = "test-repo", files = []) {
   return { source, files };
 }
 
-/** Build a fake Anthropic-style message response */
-function makeAnthropicResponse(results) {
+/** Build a fake provider-agnostic LLMCompletionResponse from analysis results */
+function makeCompletionResponse(results) {
   return {
-    content: [{ type: "text", text: JSON.stringify(results) }],
-    usage: { input_tokens: 100, output_tokens: 50 },
+    text: JSON.stringify(results),
+    tokenUsage: { inputTokens: 100, outputTokens: 50 },
   };
 }
 
@@ -153,14 +153,12 @@ test("analyze returns SignalResult for each question when LLM responds correctly
     apiKey: "test-key",
   });
 
-  // Monkey-patch the private client to intercept API calls
+  // Monkey-patch the private client to intercept LLM calls
   engine["client"] = {
-    messages: {
-      create: async () => {
-        const response = makeAnthropicResponse(batchResponses[callCount]);
-        callCount++;
-        return response;
-      },
+    complete: async () => {
+      const response = makeCompletionResponse(batchResponses[callCount]);
+      callCount++;
+      return response;
     },
   };
 
@@ -224,12 +222,10 @@ test("analyze fills in missing questions with zero-confidence fallback", async (
   });
 
   engine["client"] = {
-    messages: {
-      create: async () => {
-        const response = makeAnthropicResponse(batchResponses[callCount]);
-        callCount++;
-        return response;
-      },
+    complete: async () => {
+      const response = makeCompletionResponse(batchResponses[callCount]);
+      callCount++;
+      return response;
     },
   };
 
@@ -250,10 +246,8 @@ test("analyze gracefully handles LLM API error", async () => {
 
   // Always throws
   engine["client"] = {
-    messages: {
-      create: async () => {
-        throw new Error("Network error");
-      },
+    complete: async () => {
+      throw new Error("Network error");
     },
   };
 
@@ -274,12 +268,10 @@ test("analyze gracefully handles malformed JSON from LLM", async () => {
   });
 
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: "not valid json {{{" }],
-        usage: { input_tokens: 10, output_tokens: 5 },
-      }),
-    },
+    complete: async () => ({
+      text: "not valid json {{{",
+      tokenUsage: { inputTokens: 10, outputTokens: 5 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -310,27 +302,20 @@ test("analyze handles LLM response wrapped in markdown code fences", async () =>
   });
 
   engine["client"] = {
-    messages: {
-      create: async () => {
-        callCount++;
-        if (callCount === 2) {
-          // architecture batch — wrap in code fences
-          return {
-            content: [
-              {
-                type: "text",
-                text: "```json\n" + JSON.stringify(archResults) + "\n```",
-              },
-            ],
-            usage: { input_tokens: 100, output_tokens: 50 },
-          };
-        }
-        // Other batches return empty arrays
+    complete: async () => {
+      callCount++;
+      if (callCount === 2) {
+        // architecture batch — wrap in code fences
         return {
-          content: [{ type: "text", text: "[]" }],
-          usage: { input_tokens: 10, output_tokens: 5 },
+          text: "```json\n" + JSON.stringify(archResults) + "\n```",
+          tokenUsage: { inputTokens: 100, outputTokens: 50 },
         };
-      },
+      }
+      // Other batches return empty arrays
+      return {
+        text: "[]",
+        tokenUsage: { inputTokens: 10, outputTokens: 5 },
+      };
     },
   };
 
@@ -402,20 +387,13 @@ test("analyze parses JSON array when LLM includes brackets in preamble text", as
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [
-          {
-            type: "text",
-            // Brackets appear in the preamble before the actual JSON array
-            text:
-              "Based on rubric [score 0–2] and evidence [see files]:\n" +
-              JSON.stringify([policyResult]),
-          },
-        ],
-        usage: { input_tokens: 50, output_tokens: 20 },
-      }),
-    },
+    complete: async () => ({
+      // Brackets appear in the preamble before the actual JSON array
+      text:
+        "Based on rubric [score 0–2] and evidence [see files]:\n" +
+        JSON.stringify([policyResult]),
+      tokenUsage: { inputTokens: 50, outputTokens: 20 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -431,7 +409,7 @@ test("analyze parses JSON array when LLM includes brackets in preamble text", as
 test("analyze still returns 24 results when all batches fail, with confidence 0", async () => {
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: { create: async () => { throw new Error("API unavailable"); } },
+    complete: async () => { throw new Error("API unavailable"); },
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -445,12 +423,10 @@ test("confidence:0 sentinel is preserved through toSignalResult for missing ques
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   // Return an empty array — all questions will get missingResult (confidence 0)
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: "[]" }],
-        usage: { input_tokens: 10, output_tokens: 2 },
-      }),
-    },
+    complete: async () => ({
+      text: "[]",
+      tokenUsage: { inputTokens: 10, outputTokens: 2 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -471,18 +447,11 @@ test("duplicate questionId keeps the higher-confidence entry", async () => {
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [
-          {
-            type: "text",
-            // Low-confidence entry appears first, high-confidence second
-            text: JSON.stringify([lowConfidence, highConfidence]),
-          },
-        ],
-        usage: { input_tokens: 50, output_tokens: 20 },
-      }),
-    },
+    complete: async () => ({
+      // Low-confidence entry appears first, high-confidence second
+      text: JSON.stringify([lowConfidence, highConfidence]),
+      tokenUsage: { inputTokens: 50, outputTokens: 20 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -499,14 +468,10 @@ test("duplicate questionId keeps first when it already has higher confidence", a
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [
-          { type: "text", text: JSON.stringify([highConfidence, lowConfidence]) },
-        ],
-        usage: { input_tokens: 50, output_tokens: 20 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify([highConfidence, lowConfidence]),
+      tokenUsage: { inputTokens: 50, outputTokens: 20 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -525,12 +490,10 @@ test("inferred confidence is clamped to [0.3, 0.7] range", async () => {
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify([tooLow]) }],
-        usage: { input_tokens: 10, output_tokens: 5 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify([tooLow]),
+      tokenUsage: { inputTokens: 10, outputTokens: 5 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -556,12 +519,10 @@ test("SignalResult evidence contains reasoning and evidence_summary", async () =
   });
 
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify(policyResults) }],
-        usage: { input_tokens: 100, output_tokens: 50 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify(policyResults),
+      tokenUsage: { inputTokens: 100, outputTokens: 50 },
+    }),
   };
 
   const results = await engine.analyze(makeBundle("test-repo"));
@@ -606,12 +567,10 @@ test("agent analysis: positive case — mature agent definitions with scope and 
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify(agentResults) }],
-        usage: { input_tokens: 200, output_tokens: 80 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify(agentResults),
+      tokenUsage: { inputTokens: 200, outputTokens: 80 },
+    }),
   };
 
   // Bundle with agent files and commit history metadata
@@ -675,12 +634,10 @@ test("agent analysis: negative case — no agent files, no instruction history",
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify(agentResults) }],
-        usage: { input_tokens: 50, output_tokens: 40 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify(agentResults),
+      tokenUsage: { inputTokens: 50, outputTokens: 40 },
+    }),
   };
 
   // Bundle with no agent files and no commit history
@@ -742,12 +699,10 @@ test("eval analysis: positive case — LLM-as-judge CI gate, business KPIs, auto
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify(evalResults) }],
-        usage: { input_tokens: 300, output_tokens: 100 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify(evalResults),
+      tokenUsage: { inputTokens: 300, outputTokens: 100 },
+    }),
   };
 
   // Bundle with CI workflow, eval config, dashboard, regression config, and commit history
@@ -831,12 +786,10 @@ test("eval analysis: negative case — no eval CI, only technical metrics, no re
 
   const engine = new AIInferenceEngine({ provider: "anthropic", apiKey: "test-key" });
   engine["client"] = {
-    messages: {
-      create: async () => ({
-        content: [{ type: "text", text: JSON.stringify(evalResults) }],
-        usage: { input_tokens: 80, output_tokens: 60 },
-      }),
-    },
+    complete: async () => ({
+      text: JSON.stringify(evalResults),
+      tokenUsage: { inputTokens: 80, outputTokens: 60 },
+    }),
   };
 
   // Bundle with no eval-related files and no commit history

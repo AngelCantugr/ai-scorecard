@@ -109,8 +109,12 @@ for the per-question evidence mapping.
 - Node.js ≥ 18
 - A GitHub personal access token with **read-only** org access:
   `repo`, `read:org`, `read:user`
-- _(Optional)_ An Anthropic API key for AI inference on questions that can't be
-  directly measured from repo data
+- _(Optional)_ For AI inference on questions the GitHub API can't measure
+  directly, choose **one** of:
+  - An **Anthropic API key** (cloud, default), or
+  - A local **[Ollama](https://ollama.com)** server — `ollama serve` plus a
+    pulled model (e.g. `ollama pull llama3.1`). No API key, no data leaves
+    your machine.
 
 ### Install
 
@@ -145,12 +149,19 @@ ai-scorecard assess \
   --github-org acme-corp \
   --github-token ghp_xxxxxxxxxxxx
 
-# With AI inference — fills gaps the GitHub API can't answer directly
+# With AI inference (Anthropic, default) — fills gaps the GitHub API can't answer
 ai-scorecard assess \
   --github-org acme-corp \
   --github-token ghp_xxxxxxxxxxxx \
   --ai-inference \
   --anthropic-key sk-ant-xxxxxxxxxxxx
+
+# With AI inference using a LOCAL Ollama server — no API key, no data leaves
+# your machine. Requires `ollama serve` running and `ollama pull llama3.1`.
+ai-scorecard assess \
+  --github-org acme-corp \
+  --github-token ghp_xxxxxxxxxxxx \
+  --ai-inference --provider ollama --model llama3.1
 
 # Scope to specific repos
 ai-scorecard assess \
@@ -221,17 +232,22 @@ Completed in 8.3s
 
 ## All CLI Options
 
-| Flag                     | Description                                        | Default             |
-| ------------------------ | -------------------------------------------------- | ------------------- |
-| `--github-org <org>`     | GitHub organization to assess                      | —                   |
-| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var)             | —                   |
-| `--ai-inference`         | Enable LLM analysis for unmeasurable questions     | off                 |
-| `--anthropic-key <key>`  | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | —                   |
-| `--model <model>`        | LLM model to use for inference                     | `claude-sonnet-4-6` |
-| `--output <format>`      | `table` \| `json` \| `markdown`                    | `table`             |
-| `--repos <list>`         | Comma-separated repo names to scope the scan       | all repos           |
-| `--max-repos <n>`        | Maximum repos to scan                              | `50`                |
-| `--dry-run`              | Print config and exit — no API calls               | off                 |
+| Flag                     | Description                                        | Default                  |
+| ------------------------ | -------------------------------------------------- | ------------------------ |
+| `--github-org <org>`     | GitHub organization to assess                      | —                        |
+| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var)             | —                        |
+| `--ai-inference`         | Enable LLM analysis for unmeasurable questions     | off                      |
+| `--provider <name>`      | `anthropic` (cloud) or `ollama` (local)            | `anthropic`              |
+| `--anthropic-key <key>`  | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | —                        |
+| `--ollama-url <url>`     | Ollama base URL (or `OLLAMA_URL` env var)          | `http://localhost:11434` |
+| `--model <model>`        | LLM model to use for inference                     | provider default ¹       |
+| `--output <format>`      | `table` \| `json` \| `markdown`                    | `table`                  |
+| `--repos <list>`         | Comma-separated repo names to scope the scan       | all repos                |
+| `--max-repos <n>`        | Maximum repos to scan                              | `50`                     |
+| `--dry-run`              | Print config and exit — no API calls               | off                      |
+
+¹ Default model: `claude-sonnet-4-6` for `--provider anthropic`, `llama3.1` for
+`--provider ollama`. Override with `--model <name>` for either provider.
 
 ---
 
