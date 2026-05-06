@@ -29,8 +29,12 @@ export class OllamaClient implements LLMClient {
   private readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
+    // Use `||` (not `??`) so an empty string from a misconfigured env var
+    // (e.g. `OLLAMA_URL=""`) falls back to the default. With `??` the empty
+    // string is preserved and the later `fetch` call would fail with an
+    // "Invalid URL" error far from the configuration mistake.
     // Trim trailing slash so we can join paths with a single `/`.
-    this.baseUrl = (baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.baseUrl = (baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
   }
 
   async complete(req: LLMCompletionRequest): Promise<LLMCompletionResponse> {

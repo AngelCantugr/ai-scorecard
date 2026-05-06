@@ -95,7 +95,11 @@ export async function runAssess(options: AssessOptions): Promise<void> {
   // string. Validate explicitly so an invalid value (typo, future provider
   // name) fails loudly instead of silently dispatching to Ollama.
   if (options.aiInference) {
-    const rawProvider = options.provider ?? "anthropic";
+    // Widen to string so the unknown-provider branch isn't narrowed to `never`
+    // (the eslint restrict-template-expressions rule rejects never in template
+    // literals; keeping it as string lets us interpolate the bad value back to
+    // the user verbatim).
+    const rawProvider: string = options.provider ?? "anthropic";
     if (rawProvider !== "anthropic" && rawProvider !== "ollama") {
       console.error(
         chalk.red(

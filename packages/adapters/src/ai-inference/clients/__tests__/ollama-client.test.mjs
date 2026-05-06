@@ -64,6 +64,23 @@ test("OllamaClient defaults to http://localhost:11434 and posts to /api/chat", a
   }
 });
 
+test("OllamaClient falls back to default when baseUrl is an empty string", async () => {
+  // Guards against `??` vs `||` mistake: with `??` an empty string would be
+  // preserved and `fetch("/api/chat")` would throw "Invalid URL". With `||`
+  // we recover the default URL.
+  const { calls, restore } = stubFetch(() =>
+    jsonResponse({ message: { content: "[]" }, prompt_eval_count: 1, eval_count: 1 })
+  );
+
+  try {
+    const client = new OllamaClient("");
+    await client.complete({ model: "llama3.1", maxTokens: 100, prompt: "x" });
+    assert.equal(calls[0].input, "http://localhost:11434/api/chat");
+  } finally {
+    restore();
+  }
+});
+
 test("OllamaClient strips trailing slashes from baseUrl", async () => {
   const { calls, restore } = stubFetch(() =>
     jsonResponse({ message: { content: "[]" }, prompt_eval_count: 1, eval_count: 1 })
