@@ -15,5 +15,15 @@ export function createLLMClient(config: AIInferenceConfig): LLMClient {
       return new AnthropicClient(config.apiKey);
     case "ollama":
       return new OllamaClient(config.baseUrl);
+    default: {
+      // Defense-in-depth for callers that bypass TypeScript (e.g. JS users or
+      // a config-file value that slipped past CLI validation). The exhaustive
+      // assertion keeps this branch a compile-time error if a new provider is
+      // added to the union and we forget a case.
+      const exhaustive: never = config;
+      throw new Error(
+        `Unknown AI inference provider: ${JSON.stringify((exhaustive as { provider: unknown }).provider)}`
+      );
+    }
   }
 }

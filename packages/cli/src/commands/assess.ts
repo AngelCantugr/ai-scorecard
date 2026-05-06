@@ -90,11 +90,21 @@ export async function runAssess(options: AssessOptions): Promise<void> {
     console.error(chalk.red("Error: --github-token is required (or set GITHUB_TOKEN env var)."));
     process.exit(1);
   }
-  // Provider-specific validation: only Anthropic requires an API key. Ollama
-  // talks to a local (or self-hosted) server and is unauthenticated by default.
+  // Provider validation. The CLI flag is constrained via .choices(...), but a
+  // config file's `ai.provider` value bypasses that and is read as a raw
+  // string. Validate explicitly so an invalid value (typo, future provider
+  // name) fails loudly instead of silently dispatching to Ollama.
   if (options.aiInference) {
-    const provider = options.provider ?? "anthropic";
-    if (provider === "anthropic" && !options.anthropicKey) {
+    const rawProvider = options.provider ?? "anthropic";
+    if (rawProvider !== "anthropic" && rawProvider !== "ollama") {
+      console.error(
+        chalk.red(
+          `Error: unknown provider "${rawProvider}". Supported providers: anthropic, ollama.`
+        )
+      );
+      process.exit(1);
+    }
+    if (rawProvider === "anthropic" && !options.anthropicKey) {
       console.error(
         chalk.red(
           "Error: --anthropic-key is required when --ai-inference is enabled with --provider anthropic."
@@ -155,9 +165,7 @@ export async function runAssess(options: AssessOptions): Promise<void> {
     options.aiInference && (provider === "ollama" || Boolean(options.anthropicKey));
 
   if (options.aiInference && canRunInference) {
-    const aiSpinner = ora(
-      `Running AI inference analysis (${provider})…`
-    ).start();
+    const aiSpinner = ora(`Running AI inference analysis (${provider})…`).start();
     try {
       const engine = new AIInferenceEngine(
         provider === "anthropic"

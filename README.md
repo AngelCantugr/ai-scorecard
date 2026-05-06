@@ -232,19 +232,19 @@ Completed in 8.3s
 
 ## All CLI Options
 
-| Flag                     | Description                                        | Default             |
-| ------------------------ | -------------------------------------------------- | ------------------- |
-| `--github-org <org>`     | GitHub organization to assess                      | —                   |
-| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var)             | —                   |
-| `--ai-inference`         | Enable LLM analysis for unmeasurable questions     | off                 |
-| `--provider <name>`      | `anthropic` (cloud) or `ollama` (local)            | `anthropic`         |
-| `--anthropic-key <key>`  | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | —                   |
+| Flag                     | Description                                        | Default                  |
+| ------------------------ | -------------------------------------------------- | ------------------------ |
+| `--github-org <org>`     | GitHub organization to assess                      | —                        |
+| `--github-token <token>` | GitHub PAT (or `GITHUB_TOKEN` env var)             | —                        |
+| `--ai-inference`         | Enable LLM analysis for unmeasurable questions     | off                      |
+| `--provider <name>`      | `anthropic` (cloud) or `ollama` (local)            | `anthropic`              |
+| `--anthropic-key <key>`  | Anthropic API key (or `ANTHROPIC_API_KEY` env var) | —                        |
 | `--ollama-url <url>`     | Ollama base URL (or `OLLAMA_URL` env var)          | `http://localhost:11434` |
-| `--model <model>`        | LLM model to use for inference                     | provider default ¹  |
-| `--output <format>`      | `table` \| `json` \| `markdown`                    | `table`             |
-| `--repos <list>`         | Comma-separated repo names to scope the scan       | all repos           |
-| `--max-repos <n>`        | Maximum repos to scan                              | `50`                |
-| `--dry-run`              | Print config and exit — no API calls               | off                 |
+| `--model <model>`        | LLM model to use for inference                     | provider default ¹       |
+| `--output <format>`      | `table` \| `json` \| `markdown`                    | `table`                  |
+| `--repos <list>`         | Comma-separated repo names to scope the scan       | all repos                |
+| `--max-repos <n>`        | Maximum repos to scan                              | `50`                     |
+| `--dry-run`              | Print config and exit — no API calls               | off                      |
 
 ¹ Default model: `claude-sonnet-4-6` for `--provider anthropic`, `llama3.1` for
 `--provider ollama`. Override with `--model <name>` for either provider.

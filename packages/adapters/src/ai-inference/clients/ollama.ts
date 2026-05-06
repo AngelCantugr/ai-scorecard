@@ -51,9 +51,7 @@ export class OllamaClient implements LLMClient {
 
     if (!response.ok) {
       const detail = await safeReadText(response);
-      throw new Error(
-        `Ollama request to ${url} failed with status ${response.status}: ${detail}`
-      );
+      throw new Error(`Ollama request to ${url} failed with status ${response.status}: ${detail}`);
     }
 
     const parsed = (await response.json()) as OllamaChatResponse;
