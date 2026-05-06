@@ -18,7 +18,11 @@ export interface AssessOptions {
   githubOrg?: string;
   githubToken?: string;
   aiInference?: boolean;
+  /** "anthropic" (default) or "ollama" */
+  provider?: "anthropic" | "ollama";
   anthropicKey?: string;
+  /** Base URL for Ollama (default: http://localhost:11434) */
+  ollamaUrl?: string;
   output?: "table" | "json" | "markdown";
   repos?: string;
   dryRun?: boolean;
@@ -39,8 +43,15 @@ function dryRun(options: AssessOptions): void {
   console.log(`  Max repos:     ${options.maxRepos ?? 50}`);
   console.log(`  AI Inference:  ${options.aiInference ? "enabled" : "disabled"}`);
   if (options.aiInference) {
-    console.log(`  Anthropic Key: ${options.anthropicKey ? "***" : "(not set)"}`);
-    console.log(`  Model:         ${options.model ?? "claude-sonnet-4-6"}`);
+    const provider = options.provider ?? "anthropic";
+    console.log(`  Provider:      ${provider}`);
+    if (provider === "anthropic") {
+      console.log(`  Anthropic Key: ${options.anthropicKey ? "***" : "(not set)"}`);
+      console.log(`  Model:         ${options.model ?? "claude-sonnet-4-6"}`);
+    } else {
+      console.log(`  Ollama URL:    ${options.ollamaUrl ?? "http://localhost:11434"}`);
+      console.log(`  Model:         ${options.model ?? "llama3.1"}`);
+    }
   }
   console.log(`  Output format: ${options.output ?? "table"}`);
   console.log(
@@ -79,9 +90,18 @@ export async function runAssess(options: AssessOptions): Promise<void> {
     console.error(chalk.red("Error: --github-token is required (or set GITHUB_TOKEN env var)."));
     process.exit(1);
   }
-  if (options.aiInference && !options.anthropicKey) {
-    console.error(chalk.red("Error: --anthropic-key is required when --ai-inference is enabled."));
-    process.exit(1);
+  // Provider-specific validation: only Anthropic requires an API key. Ollama
+  // talks to a local (or self-hosted) server and is unauthenticated by default.
+  if (options.aiInference) {
+    const provider = options.provider ?? "anthropic";
+    if (provider === "anthropic" && !options.anthropicKey) {
+      console.error(
+        chalk.red(
+          "Error: --anthropic-key is required when --ai-inference is enabled with --provider anthropic."
+        )
+      );
+      process.exit(1);
+    }
   }
 
   const startTime = Date.now();
@@ -130,14 +150,28 @@ export async function runAssess(options: AssessOptions): Promise<void> {
   // ── Step 3: AI Inference (optional) ───────────────────────────────────────
   let aiSignals: SignalResult[] = [];
 
-  if (options.aiInference && options.anthropicKey) {
-    const aiSpinner = ora("Running AI inference analysis…").start();
+  const provider = options.provider ?? "anthropic";
+  const canRunInference =
+    options.aiInference && (provider === "ollama" || Boolean(options.anthropicKey));
+
+  if (options.aiInference && canRunInference) {
+    const aiSpinner = ora(
+      `Running AI inference analysis (${provider})…`
+    ).start();
     try {
-      const engine = new AIInferenceEngine({
-        provider: "anthropic",
-        apiKey: options.anthropicKey,
-        ...(options.model !== undefined ? { model: options.model } : {}),
-      });
+      const engine = new AIInferenceEngine(
+        provider === "anthropic"
+          ? {
+              provider: "anthropic",
+              apiKey: options.anthropicKey as string,
+              ...(options.model !== undefined ? { model: options.model } : {}),
+            }
+          : {
+              provider: "ollama",
+              ...(options.ollamaUrl !== undefined ? { baseUrl: options.ollamaUrl } : {}),
+              ...(options.model !== undefined ? { model: options.model } : {}),
+            }
+      );
 
       const bundle: ContentBundle = {
         source: `github:${org}`,

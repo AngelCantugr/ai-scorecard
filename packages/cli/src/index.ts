@@ -38,11 +38,24 @@ program
     "GitHub personal access token",
     process.env["GITHUB_TOKEN"] ?? config.github?.token
   )
-  .option("--ai-inference", "Enable AI inference analysis (requires Anthropic key)")
+  .option("--ai-inference", "Enable AI inference analysis")
+  .addOption(
+    new Option(
+      "--provider <provider>",
+      "AI inference provider: anthropic (default) or ollama (local)"
+    )
+      .choices(["anthropic", "ollama"])
+      .default(config.ai?.provider ?? "anthropic")
+  )
   .option(
     "--anthropic-key <key>",
-    "Anthropic API key for AI inference",
+    "Anthropic API key (required when --provider anthropic)",
     process.env["ANTHROPIC_API_KEY"] ?? config.ai?.apiKey
+  )
+  .option(
+    "--ollama-url <url>",
+    "Ollama base URL (default: http://localhost:11434)",
+    process.env["OLLAMA_URL"] ?? config.ai?.baseUrl
   )
   .option("--model <model>", "AI model to use for inference", config.ai?.model)
   .addOption(
@@ -69,7 +82,9 @@ program
       githubOrg?: string;
       githubToken?: string;
       aiInference?: boolean;
+      provider?: "anthropic" | "ollama";
       anthropicKey?: string;
+      ollamaUrl?: string;
       model?: string;
       output?: "table" | "json" | "markdown";
       repos?: string;
@@ -80,7 +95,9 @@ program
         ...(opts.githubOrg !== undefined ? { githubOrg: opts.githubOrg } : {}),
         ...(opts.githubToken !== undefined ? { githubToken: opts.githubToken } : {}),
         ...(opts.aiInference !== undefined ? { aiInference: opts.aiInference } : {}),
+        ...(opts.provider !== undefined ? { provider: opts.provider } : {}),
         ...(opts.anthropicKey !== undefined ? { anthropicKey: opts.anthropicKey } : {}),
+        ...(opts.ollamaUrl !== undefined ? { ollamaUrl: opts.ollamaUrl } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
         output: opts.output ?? "table",
         ...(opts.repos !== undefined ? { repos: opts.repos } : {}),
